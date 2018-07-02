@@ -1,10 +1,12 @@
 package main
 
+// IMPORTANT: Use this fork of godo - go get -u github.com/davars/godo/cmd/godo
+
 import (
 	"fmt"
 	"strings"
 
-	do "gopkg.in/godo.v2"
+	do "github.com/gbevan/godo"
 )
 
 func tasks(p *do.Project) {
@@ -31,8 +33,8 @@ func tasks(p *do.Project) {
 		// c.Start(`scripts/start_goswim.sh`)
 		// do.InheritParentEnv = false
 		c.Start(`GOSWIM_DBAUTH_TOKEN={{.token}} GOSWIM_DBURL=127.0.0.1:27017 main.go`, do.M{"token": token})
-	}).Src("main.go")
-	// }).Src("**/*.go", "!{.git/,.vagrant/,vendor/*}")
+		// }).Src("main.go")
+	}).Src("**/*.go")
 }
 
 func main() {
