@@ -75,3 +75,16 @@ Secrets could also be looked up using `hashi_lookup()` and the Vault token provi
 
 ## Conceptual Architecture
 ![Arch](arch.png)
+
+## Logical Design
+![Logical](logical.png)
+
+## Ideas
+
+### use Fuse mounts into the containered task runs
+see https://github.com/hanwen/go-fuse
+
+Could share/mount unix domain socket and any Vault Token / secrets into the
+task container.  Any secrets could be auto-"deleted" when read by the Fuse
+subsystem in goswim - i.e. a one-shot share/read operation.
+Attempts to re-read a secret should log an alert.

@@ -8,10 +8,39 @@
   revision = "4748e29d5718c2df4028a6543edf86fd8cc0f881"
 
 [[projects]]
+  name = "github.com/davars/godo"
+  packages = [
+    "glob",
+    "util",
+    "watcher",
+    "watcher/fswatch"
+  ]
+  revision = "ee2d4f350940505276943f04aa6468d0124a2f54"
+  version = "v2.1.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/foize/go.fifo"
   packages = ["."]
   revision = "3a04cfeec12143459af4c62b147b365e950051c9"
+
+[[projects]]
+  name = "github.com/gbevan/godo"
+  packages = ["."]
+  revision = "ee2d4f350940505276943f04aa6468d0124a2f54"
+  version = "v2.1.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/globalsign/mgo"
+  packages = [
+    ".",
+    "bson",
+    "internal/json",
+    "internal/sasl",
+    "internal/scram"
+  ]
+  revision = "113d3961e7311526535a1ef7042196563d442761"
 
 [[projects]]
   name = "github.com/go-chi/chi"
@@ -231,33 +260,9 @@
   packages = ["rate"]
   revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
-[[projects]]
-  name = "gopkg.in/godo.v2"
-  packages = [
-    ".",
-    "glob",
-    "util",
-    "watcher",
-    "watcher/fswatch"
-  ]
-  revision = "b5fd2f0bef1ebe832e628cfad18ab1cc707f65a1"
-  version = "v2.0.9"
-
-[[projects]]
-  branch = "v2"
-  name = "gopkg.in/mgo.v2"
-  packages = [
-    ".",
-    "bson",
-    "internal/json",
-    "internal/sasl",
-    "internal/scram"
-  ]
-  revision = "3f83fa5005286a7fe593b055f0d7771a7dce4655"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6747fb35be1d324c3363e075ed935ad28a565c2227972c0e1be4f5ff24c6dd3e"
+  inputs-digest = "5110420b90b2c39b5b9bbf2166d830a6e0baeeddaacf67f272612403ea2f1481"
   solver-name = "gps-cdcl"
   solver-version = 1

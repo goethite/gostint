@@ -12,6 +12,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       d.image = "gbevan/vagrant-ubuntu-dev:bionic"
       d.has_ssh = true
       d.ports = ["3232:3232", "8300:8200"]
+      d.privileged = true
+      # d.volumes << '/var/lib/docker'
     end
   end
 end

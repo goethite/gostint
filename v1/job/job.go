@@ -1,33 +1,41 @@
 package job
 
 import (
+	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gbevan/goswim/jobqueues"
+	"github.com/globalsign/mgo"
+	"github.com/globalsign/mgo/bson"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
-	"github.com/satori/go.uuid"
 )
 
-type JobRequest struct {
-	*jobqueues.Job
+type JobRouter struct {
+	Db *mgo.Database
 }
 
-func (j *JobRequest) Bind(req *http.Request) error {
-	// a.Job.Qname
-	j.Job.Qname = strings.ToLower(j.Job.Qname)
-	j.Job.ID = uuid.NewV4().String()
-	j.Job.Status = "queued"
+var jobRouter JobRouter
 
-	jobqueues.AddJobTracker(j.Job)
+type JobRequest jobqueues.Job
+
+// Bind Binder of decoded request payload
+func (j *JobRequest) Bind(req *http.Request) error {
+	j.Qname = strings.ToLower(j.Qname)
+	j.Status = "queued"
+	j.Submitted = time.Now()
+
 	return nil
 }
 
-func Routes() *chi.Mux {
+// Routes Route handlers for jobs
+func Routes(db *mgo.Database) *chi.Mux {
+	jobRouter = JobRouter{
+		Db: db,
+	}
 	router := chi.NewRouter()
-
-	// router.Get("/", GetAllDocs)
 	router.Post("/", PostJob)
 	return router
 }
@@ -56,9 +64,7 @@ func ErrInvalidRequest(err error) render.Renderer {
 }
 
 // PostJob post a job to the fifo queue
-// curl http://127.0.0.1:3232/v1/api/job \
-//   -X POST \
-//   -d '{"qname":"play", "jobtype": "ansible", "content": "base64 here", "run": "hello.yml"}'
+// curl http://127.0.0.1:3232/v1/api/job -X POST -d '{"qname":"play", "jobtype": "ansible", "content": "base64 here", "run": "hello.yml"}'
 // -> {"qname":"play","jobtype":"ansible","content":"base64 here","run":"hello.yml"}
 
 func PostJob(w http.ResponseWriter, req *http.Request) {
@@ -67,10 +73,21 @@ func PostJob(w http.ResponseWriter, req *http.Request) {
 		render.Render(w, req, ErrInvalidRequest(err))
 		return
 	}
-	job := data.Job
+	job := data
 
-	queue := jobqueues.GetQueue("play")
-	queue.Q.Add(job)
-	queue.Wake <- true
-	render.JSON(w, req, job)
+	coll := jobRouter.Db.C("queues")
+	newID := bson.NewObjectId()
+	jobRequest := job
+	jobRequest.ID = newID
+	err := coll.Insert(jobRequest)
+	if err != nil {
+		panic(err)
+	}
+	// log.Printf("ci: %v\n", ci)
+	log.Printf("Inserted id: %s\n", newID)
+
+	// queue := jobqueues.GetQueue("play")
+	// queue.Q.Add(job)
+	// queue.Wake <- true
+	render.JSON(w, req, jobRequest)
 }

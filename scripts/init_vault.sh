@@ -36,10 +36,6 @@ vault write database/roles/goswim-dbauth-role \
   default_ttl="10m" \
   max_ttl="24h"
 
-# Enable Vault AppRole
-echo '=== enable AppRole auth ================================='
-vault auth enable approle
-
 # Create policy to access mongodb secret eng user/pass generator
 echo '=== Create policy to access mongodb ====================='
 curl -s \
@@ -47,3 +43,29 @@ curl -s \
   --header 'X-Vault-Token: root' \
   --data '{"policy": "path \"database/creds/goswim-dbauth-role\" {\n  capabilities = [\"read\"]\n}"}' \
   ${VAULT_ADDR}/v1/sys/policy/goswim-mongodb-auth
+
+# Enable Vault AppRole
+echo '=== enable AppRole auth ================================='
+vault auth enable approle
+
+# Create policy to access kv secrets for approle
+echo '=== Create policy to access kv for goswim-role =========='
+curl -s \
+  --request POST \
+  --header 'X-Vault-Token: root' \
+  --data '{"policy": "path \"secret/*\" {\n  capabilities = [\"read\"]\n}"}' \
+  ${VAULT_ADDR}/v1/sys/policy/goswim-approle
+
+# Create named role for goswim
+echo '=== Create approle role for goswim ======================'
+vault write auth/approle/role/goswim-role \
+  secret_id_ttl=1h \
+  secret_id_num_uses=100 \
+  token_num_uses=10 \
+  token_ttl=20m \
+  token_max_ttl=30m \
+  policies="goswim-approle"
+
+# Get RoleID for goswim
+export GOSWIM_ROLEID=`vault read -format=yaml -field=data auth/approle/role/goswim-role/role-id | awk '{print $2;}'`
+echo "export GOSWIM_ROLEID=$GOSWIM_ROLEID" | tee -a .bashrc

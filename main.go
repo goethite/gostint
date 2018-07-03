@@ -8,24 +8,22 @@ import (
 	"github.com/gbevan/goswim/jobqueues"
 	"github.com/gbevan/goswim/v1/doc"
 	"github.com/gbevan/goswim/v1/job"
+	"github.com/globalsign/mgo"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/hashicorp/vault/api"
-	mgo "gopkg.in/mgo.v2"
 )
 
 // MongoDB session and db
-var session *mgo.Session
+var dbSession *mgo.Session
 var goswimDb *mgo.Database
 
-type Test struct {
-	Field1 string
-}
+var appRoleID string
 
 // GetDbSession returns the MongoDB session
 func GetDbSession() *mgo.Session {
-	return session
+	return dbSession
 }
 
 // GetDb returns the goswim Db
@@ -33,31 +31,35 @@ func GetDb() *mgo.Database {
 	return goswimDb
 }
 
-func getDbCreds() (string, string, error) {
-	log.Printf("VAULT_ADDR=%s\n", os.Getenv("VAULT_ADDR"))
-	log.Printf("GOSWIM_DBAUTH_TOKEN=%s\n", os.Getenv("GOSWIM_DBAUTH_TOKEN"))
+func GetAppRoleID() string {
+	return appRoleID
+}
 
+// getDbCreds() Get Ephemeral username & password from Vault using the
+// One-Time (num_uses=2) token passed from provisioner (in dev see
+// Gododir/main.go tasks "default" -> "gettoken").
+func getDbCreds() (string, string, error) {
+	// new Vault API Client
 	client, err := api.NewClient(&api.Config{
 		Address: os.Getenv("VAULT_ADDR"),
 	})
 	if err != nil {
 		return "", "", err
 	}
-	log.Println("after new client")
 
+	// Authenticate with Vault using passed one-time token
 	client.SetToken(os.Getenv("GOSWIM_DBAUTH_TOKEN"))
-	log.Println("after set token")
+	os.Setenv("GOSWIM_DBAUTH_TOKEN", "")
 
+	// Get MongoDB ephemeral credentials
 	secretValues, err := client.Logical().Read("database/creds/goswim-dbauth-role")
 	if err != nil {
 		return "", "", err
 	}
-	log.Printf("secretValues: %v\n", secretValues)
 
 	username := ""
 	password := ""
 	for k, v := range secretValues.Data {
-		log.Printf("vault %s: %v\n", k, v)
 		switch k {
 		case "username":
 			username = v.(string)
@@ -67,7 +69,6 @@ func getDbCreds() (string, string, error) {
 			break
 		}
 	}
-	log.Printf("Data: %v\n", secretValues.Data)
 
 	return username, password, nil
 }
@@ -84,7 +85,7 @@ func Routes() *chi.Mux {
 
 	router.Route("/v1", func(r chi.Router) {
 		r.Mount("/api/doc", doc.Routes())
-		r.Mount("/api/job", job.Routes())
+		r.Mount("/api/job", job.Routes(GetDb()))
 	})
 
 	return router
@@ -95,23 +96,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	session, err = mgo.Dial(os.Getenv("GOSWIM_DBURL"))
+	dbSession, err = mgo.Dial(os.Getenv("GOSWIM_DBURL"))
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("sesson: %v\n", *session)
-	goswimDb = session.DB("goswim")
+	goswimDb = dbSession.DB("goswim")
 	err = goswimDb.Login(username, password)
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("goswimDb: %v\n", *goswimDb)
 
-	coll := goswimDb.C("test")
-	err = coll.Insert(&Test{"helloworld"})
-	if err != nil {
-		panic(err)
-	}
+	appRoleID = os.Getenv("GOSWIM_ROLEID")
 
 	// Create RESTful routes
 	router := Routes()
@@ -121,13 +116,12 @@ func main() {
 		return nil
 	}
 
-	log.Println("before walk")
 	if err := chi.Walk(router, walkFunc); err != nil {
 		log.Panicf("Logging err: %s\n", err.Error())
 	}
 
 	// Start job queues
-	jobqueues.Init()
+	jobqueues.Init(goswimDb, appRoleID)
 
 	log.Fatal(http.ListenAndServe(":3232", router))
 }
