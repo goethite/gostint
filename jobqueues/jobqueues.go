@@ -29,6 +29,7 @@ type Job struct {
 	Qname          string        `json:"qname"           bson:"qname"`
 	ContainerImage string        `json:"container_image" bson:"container_image"`
 	Content        string        `json:"content"         bson:"content"`
+	EntryPoint     string        `json:"entrypoint"      bson:"entrypoint"`
 	Run            []string      `json:"run"             bson:"run"`
 	Status         string        `json:"status"          bson:"status"`
 	Submitted      time.Time     `json:"submitted"       bson:"submitted"`
@@ -243,6 +244,7 @@ func runRequest(j *Job) {
 	// TODO: Options for how secretrefs will be passed to the container, e.g.:
 	// As "envars", "volume", "args", ...
 
+	// PoC as envvars
 	envs := []string{}
 	eArgs := []string{}
 	for k, v := range secrets {
@@ -257,6 +259,9 @@ func runRequest(j *Job) {
 	// Run job in requested container
 	dockerCmd := "docker"
 	dockerArgs := []string{"run", "--rm"}
+	if j.EntryPoint != "" {
+		dockerArgs = append(dockerArgs, "--entrypoint", j.EntryPoint)
+	}
 	dockerArgs = append(dockerArgs, eArgs...)
 	dockerArgs = append(dockerArgs, j.ContainerImage)
 	dockerArgs = append(dockerArgs, j.Run...)
