@@ -200,6 +200,7 @@ func runRequest(j *Job) {
 	}
 	log.Printf("SecretRefs: %v", j.SecretRefs)
 	secrets := map[string]string{}
+	secrets["TOKEN"] = token
 	cache := map[string]*api.Secret{}
 	for _, v := range j.SecretRefs {
 		log.Printf("SecretRef: %s", v)
@@ -242,20 +243,29 @@ func runRequest(j *Job) {
 	// TODO: Options for how secretrefs will be passed to the container, e.g.:
 	// As "envars", "volume", "args", ...
 
-	dockerEnvs := []string{}
+	envs := []string{}
+	eArgs := []string{}
 	for k, v := range secrets {
-		dockerEnvs = append(dockerEnvs, "-e", fmt.Sprintf("%s=%s", k, v))
+		envs = append(envs, fmt.Sprintf("%s=%s", k, v))
+
+		// build -e args with just keys, not values, as those are passed in cmd.Env
+		eArgs = append(eArgs, "-e")
+		eArgs = append(eArgs, k)
 	}
 
 	////////////////////////////////////
 	// Run job in requested container
 	dockerCmd := "docker"
 	dockerArgs := []string{"run", "--rm"}
-	dockerArgs = append(dockerArgs, dockerEnvs...)
+	dockerArgs = append(dockerArgs, eArgs...)
 	dockerArgs = append(dockerArgs, j.ContainerImage)
 	dockerArgs = append(dockerArgs, j.Run...)
 	log.Printf("args: %v", dockerArgs)
 	cmd := exec.Command(dockerCmd, dockerArgs...)
+
+	cmd.Env = envs // secrets passed as env vars
+	log.Printf("cmd Env: %v", cmd.Env)
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Error: execute job container failed: %s\n", err)
@@ -266,7 +276,7 @@ func runRequest(j *Job) {
 		}})
 		return
 	}
-
+	fmt.Println(string(output))
 	j.updateQueue(bson.M{"$set": bson.M{
 		"status": "success",
 		"ended":  time.Now(),
