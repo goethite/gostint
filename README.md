@@ -1,6 +1,21 @@
 # goswim
 
-## Notes
+## Dev Notes
+
+### Running in vagrant
+```
+$ vagrant up
+$ vagrant ssh
+vagrant~$ cd go/src/github.com/gbevan/goswim/
+vagrant~$ godo --watch
+```
+
+#### Accessing mongodb in vagrant
+```
+vagrant~$ mongo -u goswim_admin -p admin123 admin
+> use goswim
+> db.queues.find()
+```
 
 ### Testing Ephemeral user/password for MongoDB
 `vagrant ssh` into the container
@@ -40,6 +55,7 @@ secret_id             1b3932e2-2e76-c2bf-f962-8115359a8b05
 secret_id_accessor    7a175626-3f19-9f74-377a-12a3b8c2b9db
 
 ```
+see `tests/*.json`
 
 ### Create a KV Secret to test with
 ```
@@ -49,3 +65,4 @@ Get it back
 ```
 vault kv get secret/my-secret
 ```
+see `Gododir/main.go`

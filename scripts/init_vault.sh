@@ -59,8 +59,8 @@ curl -s \
 # Create named role for goswim
 echo '=== Create approle role for goswim ======================'
 vault write auth/approle/role/goswim-role \
-  secret_id_ttl=1h \
-  secret_id_num_uses=100 \
+  secret_id_ttl=24h \
+  secret_id_num_uses=10000 \
   token_num_uses=10 \
   token_ttl=20m \
   token_max_ttl=30m \

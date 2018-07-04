@@ -12,9 +12,17 @@ func tasks(p *do.Project) {
 	// do.Env = `GOPATH=.vendor::$GOPATH`
 	token := ""
 
+	p.Task("mocksecrets", nil, func(c *do.Context) {
+		c.Bash(`
+      vault login root
+      vault kv put secret/my-secret my-value=s3cr3t
+      vault kv put secret/my-form field1=value1 field2=value2 field3=value3
+    `)
+	})
+
 	// this step gets a one-time (2 uses) token to allow goswim to get an
 	// ephemeral user/password pair to authenticate with MongoDB
-	p.Task("gettoken", nil, func(c *do.Context) {
+	p.Task("gettoken", do.S{"mocksecrets"}, func(c *do.Context) {
 		token = c.BashOutput(`
     curl -s \
       --request POST \

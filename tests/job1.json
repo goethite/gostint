@@ -1,0 +1,15 @@
+{
+  "qname": "play",
+  "container_image": "busybox",
+  "content": "base64 here",
+  "run": [
+    "env"
+  ],
+  "secret_refs": [
+    "mysecret@secret/data/my-secret.my-value",
+    "field_1@secret/data/my-form.field1",
+    "field_2@secret/data/my-form.field2",
+    "field_3@secret/data/my-form.field3"
+  ],
+  "secret_id": "4e1f3359-6cc6-a4fa-02b3-a3fc611e04e6"
+}

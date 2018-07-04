@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"time"
 
 	"github.com/globalsign/mgo"
@@ -33,7 +34,7 @@ type Job struct {
 	Submitted      time.Time     `json:"submitted"       bson:"submitted"`
 	Started        time.Time     `json:"started"         bson:"started,omitempty"`
 	Ended          time.Time     `json:"ended"           bson:"ended,omitempty"`
-	Output         []string      `json:"log_lines"       bson:"log_lines"`
+	Output         string        `json:"log_lines"       bson:"log_lines"`
 	SecretID       string        `json:"secret_id"       bson:"secret_id"`
 	SecretRefs     []string      `json:"secret_refs"     bson:"secret_refs"`
 	ContOnWarnings bool          `json:"cont_on_warnings" bson:"cont_on_warnings"`
@@ -176,51 +177,84 @@ func runRequest(j *Job) {
 	// Authenticate with Vault using newly acquired token
 	client.SetToken(token)
 
-	secretValues, err := client.Logical().Read("secret/data/my-secret")
+	defer func() {
+		// Revoke the ephemeral token
+		resp, err = client.Logical().Write("auth/token/revoke-self", nil)
+		if err != nil {
+			log.Printf("Error: revoking token after job completed: %s", err)
+		}
+	}()
+
+	// Allow SecretRefs to be passed in job, e.g.
+	// SecretRefs: see tests/job1.json
+	// briefly cache the path response to allow multiple values to be extracted
+	// without needing to re-query the Vault.
+	secRefRe, err := regexp.Compile("^(\\w+)@([\\w\\-_/]+)\\.(([\\w\\-_]+))$")
 	if err != nil {
 		j.updateQueue(bson.M{
 			"status": "failed",
 			"ended":  time.Now(),
-			"output": fmt.Sprintf("Failed to retrieve secret from vault: %s", err),
+			"output": fmt.Sprintf("Regex compilation error: %s", err),
 		})
 		return
 	}
-	for k, v := range secretValues.Data {
-		log.Printf("secretValues Data: %s: %v", k, v)
-	}
-	log.Printf("secretValues Data.data: %v", secretValues.Data["data"])
-	for k, v := range secretValues.Data["data"].(map[string]interface{}) {
-		log.Printf("secretValues Data.data: %s: %v", k, v)
-	}
-	for _, w := range secretValues.Warnings {
-		log.Printf("secretValues Warning: %s", w)
-	}
+	log.Printf("SecretRefs: %v", j.SecretRefs)
+	secrets := map[string]string{}
+	cache := map[string]*api.Secret{}
+	for _, v := range j.SecretRefs {
+		log.Printf("SecretRef: %s", v)
 
-	if !j.ContOnWarnings && len(secretValues.Warnings) > 0 {
-		j.updateQueue(bson.M{
-			"status": "failed",
-			"ended":  time.Now(),
-			"output": fmt.Sprintf("FailOnWarnings from vault path lookups: %v", secretValues.Warnings),
-		})
-		return
-	}
+		parts := secRefRe.FindStringSubmatch(v)
+		log.Printf("parts: %v", parts)
+		secVarName := parts[1]
+		secPath := parts[2]
+		secKey := parts[3]
 
-	// TODO: Allow SecretRefs to be passed in job, e.g.
-	// SecretRefs: [
-	//   "variable_1:[secret/data/my-secret].my-value",
-	//   "variable_2:[secret/data/my-secret].my-value-2"
-	// ]
-	// briefly cache the path response to allow multiple values to be extracted
-	// without needing to re-query the Vault.
+		// var secretValues api.Secret
+		secretValues := cache[secPath]
+		if secretValues == nil {
+			secretValues, err = client.Logical().Read(secPath)
+			if err != nil {
+				j.updateQueue(bson.M{
+					"status": "failed",
+					"ended":  time.Now(),
+					"output": fmt.Sprintf("Failed to retrieve secret %s from vault: %s", secPath, err),
+				})
+				return
+			}
+
+			if !j.ContOnWarnings && len(secretValues.Warnings) > 0 {
+				j.updateQueue(bson.M{
+					"status": "failed",
+					"ended":  time.Now(),
+					"output": fmt.Sprintf("FailOnWarnings from vault path %s lookups: %v", secPath, secretValues.Warnings),
+				})
+				return
+			}
+
+			cache[secPath] = secretValues
+		}
+		log.Printf("data: %v", secretValues)
+		secrets[secVarName] = (secretValues.Data["data"].(map[string]interface{}))[secKey].(string)
+	}
+	log.Printf("secrets: %v", secrets)
 
 	// TODO: Options for how secretrefs will be passed to the container, e.g.:
 	// As "envars", "volume", "args", ...
 
+	dockerEnvs := []string{}
+	for k, v := range secrets {
+		dockerEnvs = append(dockerEnvs, "-e", fmt.Sprintf("%s=%s", k, v))
+	}
+
 	////////////////////////////////////
 	// Run job in requested container
 	dockerCmd := "docker"
-	dockerArgs := []string{"run", "--rm", j.ContainerImage}
+	dockerArgs := []string{"run", "--rm"}
+	dockerArgs = append(dockerArgs, dockerEnvs...)
+	dockerArgs = append(dockerArgs, j.ContainerImage)
 	dockerArgs = append(dockerArgs, j.Run...)
+	log.Printf("args: %v", dockerArgs)
 	cmd := exec.Command(dockerCmd, dockerArgs...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -238,6 +272,4 @@ func runRequest(j *Job) {
 		"ended":  time.Now(),
 		"output": fmt.Sprintf("%s", output),
 	}})
-
-	// log.Printf("After %s", (*j).String())
 }
