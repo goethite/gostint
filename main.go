@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/gbevan/goswim/jobqueues"
+	"github.com/gbevan/goswim/pingclean"
 	"github.com/gbevan/goswim/v1/doc"
 	"github.com/gbevan/goswim/v1/job"
 	"github.com/globalsign/mgo"
@@ -106,6 +107,9 @@ func main() {
 		panic(err)
 	}
 
+	// init ping and clean
+	nodeUuid := pingclean.Init(goswimDb)
+
 	appRoleID = os.Getenv("GOSWIM_ROLEID")
 
 	// Create RESTful routes
@@ -121,7 +125,7 @@ func main() {
 	}
 
 	// Start job queues
-	jobqueues.Init(goswimDb, appRoleID)
+	jobqueues.Init(goswimDb, appRoleID, nodeUuid)
 
 	log.Fatal(http.ListenAndServe(":3232", router))
 }

@@ -8,6 +8,12 @@
   revision = "4748e29d5718c2df4028a6543edf86fd8cc0f881"
 
 [[projects]]
+  name = "github.com/Microsoft/go-winio"
+  packages = ["."]
+  revision = "67921128fb397dd80339870d2193d6b1e6856fd4"
+  version = "v0.4.8"
+
+[[projects]]
   name = "github.com/davars/godo"
   packages = [
     "glob",
@@ -19,10 +25,52 @@
   version = "v2.1.1"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/foize/go.fifo"
+  name = "github.com/docker/distribution"
+  packages = [
+    "digest",
+    "reference"
+  ]
+  revision = "48294d928ced5dd9b378f7fd7c6f5da3ff3f2c89"
+  version = "v2.6.2"
+
+[[projects]]
+  name = "github.com/docker/docker"
+  packages = [
+    "api/types",
+    "api/types/blkiodev",
+    "api/types/container",
+    "api/types/events",
+    "api/types/filters",
+    "api/types/mount",
+    "api/types/network",
+    "api/types/reference",
+    "api/types/registry",
+    "api/types/strslice",
+    "api/types/swarm",
+    "api/types/time",
+    "api/types/versions",
+    "api/types/volume",
+    "client",
+    "pkg/tlsconfig"
+  ]
+  revision = "092cba3727bb9b4a2f0e922cd6c0f93ea270e363"
+  version = "v1.13.1"
+
+[[projects]]
+  name = "github.com/docker/go-connections"
+  packages = [
+    "nat",
+    "sockets",
+    "tlsconfig"
+  ]
+  revision = "3ede32e2033de7505e6500d6c868c2b9ed9f169d"
+  version = "v0.3.0"
+
+[[projects]]
+  name = "github.com/docker/go-units"
   packages = ["."]
-  revision = "3a04cfeec12143459af4c62b147b365e950051c9"
+  revision = "47565b4f722fb6ceae66b95f853feed578a4a51c"
+  version = "v0.3.3"
 
 [[projects]]
   name = "github.com/gbevan/godo"
@@ -189,6 +237,12 @@
   version = "v1.0"
 
 [[projects]]
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   name = "github.com/ryanuber/go-glob"
   packages = ["."]
   revision = "572520ed46dbddaed19ea3d9541bdd0494163693"
@@ -217,10 +271,13 @@
   name = "golang.org/x/net"
   packages = [
     "context",
+    "context/ctxhttp",
     "http/httpguts",
     "http2",
     "http2/hpack",
-    "idna"
+    "idna",
+    "internal/socks",
+    "proxy"
   ]
   revision = "4cb1c02c05b0e749b0365f61ae859a8e0cfceed9"
 
@@ -260,9 +317,15 @@
   packages = ["rate"]
   revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
+[[projects]]
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
+  version = "v2.2.1"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5110420b90b2c39b5b9bbf2166d830a6e0baeeddaacf67f272612403ea2f1481"
+  inputs-digest = "712b62012a9ef9979105012ae3ab1f5248e7230cb8c0c563a14502903d883a0e"
   solver-name = "gps-cdcl"
   solver-version = 1

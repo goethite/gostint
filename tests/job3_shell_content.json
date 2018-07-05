@@ -1,0 +1,14 @@
+{
+  "qname": "play",
+  "content": "targz,H4sIAIMmPlsAA+3UTUvDMAAG4JzzK7J5E9bmox8ieBBBPYgHUTxKW+NayBppuun+vSlsQ5Q5PGQyfJ9LmraQlDdvo5gEx708TYdR5Cn/PK4RoZTIE6lEIvz9XMmEsDT81giZu77oGCOlXvz43q7nByqKp9a9NbOQx+A3+Uvu8xc8kxny34dN/rU2xkauDrDGrvxFknzJX8osJ4wH2Ms3/zz/o1FcNm3sanpzfnt1dhE93F9OTijVVW3Z+Ho4FOzRduZ5NKa6XdBXxyb6xVBq/IUp7tjq/LDY6arTvTumVdFvZtFyZuhffyNst+7/EFSoNYaOZ77jW///Sqz6L3KeZr7/QvkB/d+DyrZ90bS6e2pmxVSfsnLulqV9R2kBAAAAAAAAAAAAAAAAAA7LB7MiHhAAKAAA",
+  "run": [
+    "/goswim/hello.sh"
+  ],
+  "secret_refs": [
+    "mysecret@secret/data/my-secret.my-value",
+    "field_1@secret/data/my-form.field1",
+    "field_2@secret/data/my-form.field2",
+    "field_3@secret/data/my-form.field3"
+  ],
+  "secret_id": "2626501d-82a0-de6e-9c29-9ccea05a4f1a"
+}
