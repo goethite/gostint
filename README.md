@@ -1,7 +1,7 @@
 # goswim - A Shallow RESTful api for Ansible, Terraform ...
 ... and basically anything you would like to run as jobs in docker containered
-environments, authenticated with Hashicorp Vault AppRoles, and driven by a
-REST API.
+environments, authenticated with Hashicorp Vault AppRoles with secret
+injection, and driven by a REST API.
 
 Goal is to be a Highly Available and Scaleable API for automation.
 
