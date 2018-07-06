@@ -459,9 +459,9 @@ func (job *Job) runContainer() error {
 	cfg := container.Config{
 		Image: job.ContainerImage,
 		// Cmd:   []string{"echo", "hello world"},
-		Cmd:  job.Run,
-		Tty:  true,
-		User: "1000:1000",
+		Cmd: job.Run,
+		Tty: true,
+		// User: "1000:1000",
 	}
 
 	if len(job.EntryPoint) != 0 {
@@ -493,10 +493,7 @@ func (job *Job) runContainer() error {
 		return err
 	}
 
-	// status, err := cli.ContainerWait(ctx, resp.ID)
-	log.Println("Before ContainerWait")
 	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, "")
-	log.Println("After ContainerWait")
 	var statusBody container.ContainerWaitOKBody
 	select {
 	case err2 := <-errCh:
@@ -505,9 +502,8 @@ func (job *Job) runContainer() error {
 		}
 	case statusBody = <-statusCh:
 	}
-	log.Println("After statusCh")
 	status := statusBody.StatusCode
-	log.Printf("status from container wait: %d", status)
+	// log.Printf("status from container wait: %d", status)
 
 	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
 	if err != nil {
@@ -518,8 +514,13 @@ func (job *Job) runContainer() error {
 	io.Copy(&buf, out)
 	// fmt.Println(buf.String())
 
+	finalStatus := "success"
+	if status != 0 {
+		finalStatus = "failed"
+	}
+
 	job.updateQueue(bson.M{
-		"status":      "success",
+		"status":      finalStatus,
 		"ended":       time.Now(),
 		"output":      buf.String(),
 		"return_code": status,
