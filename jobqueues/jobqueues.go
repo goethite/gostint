@@ -1,3 +1,22 @@
+/*
+Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
+
+This file is part of goswim.
+
+goswim is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+goswim is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package jobqueues
 
 import (
@@ -9,7 +28,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -50,6 +68,7 @@ type Job struct {
 	EntryPoint     []string      `json:"entrypoint"      bson:"entrypoint"`
 	Run            []string      `json:"run"             bson:"run"`
 	Status         string        `json:"status"          bson:"status"`
+	ReturnCode     int           `json:"return_code"     bson:"return_code"`
 	Submitted      time.Time     `json:"submitted"       bson:"submitted"`
 	Started        time.Time     `json:"started"         bson:"started,omitempty"`
 	Ended          time.Time     `json:"ended"           bson:"ended,omitempty"`
@@ -80,7 +99,6 @@ func Init(db *mgo.Database, appRoleID string, nodeUuid string) {
 }
 
 func requestHandler() {
-	log.Println("Starting Request Handler")
 	db := jobQueues.Db
 	c := db.C("queues")
 
@@ -163,8 +181,6 @@ func (job *Job) updateQueue(u bson.M) (*Job, error) {
 }
 
 func (job *Job) runRequest() {
-	log.Printf("Run %s", (*job).String())
-
 	token, client, err := approle.Authenticate(jobQueues.AppRoleID, job.SecretID)
 	if err != nil {
 		job.updateQueue(bson.M{
@@ -175,56 +191,7 @@ func (job *Job) runRequest() {
 		return
 	}
 
-	/////////////////////////////////////
-	// AppRole Authenticate
-	// Get Token for passed secret_id
-	// if job.SecretID == "" {
-	// 	job.updateQueue(bson.M{
-	// 		"status": "notauthorised",
-	// 		"ended":  time.Now(),
-	// 		"output": "Vault SecretID was not provided in request",
-	// 	})
-	// 	return
-	// }
-	// appRoleID := jobQueues.AppRoleID
-	//
-	// client, err := api.NewClient(&api.Config{
-	// 	Address: os.Getenv("VAULT_ADDR"),
-	// })
-	// if err != nil {
-	// 	job.updateQueue(bson.M{
-	// 		"status": "notauthorised",
-	// 		"ended":  time.Now(),
-	// 		"output": fmt.Sprintf("Failed create vault client api: %s", err),
-	// 	})
-	// 	return
-	// }
-	//
-	// // Authenticate this request using AppRole RoleID and SecretID
-	// data := map[string]interface{}{
-	// 	"role_id":   appRoleID,
-	// 	"secret_id": job.SecretID,
-	// }
-	// resp, err := client.Logical().Write("auth/approle/login", data)
-	// if err != nil {
-	// 	job.updateQueue(bson.M{
-	// 		"status": "notauthorised",
-	// 		"ended":  time.Now(),
-	// 		"output": fmt.Sprintf("Request failed AppRole authentication with vault: %s", err),
-	// 	})
-	// 	return
-	// }
-	// if resp.Auth == nil {
-	// 	job.updateQueue(bson.M{
-	// 		"status": "notauthorised",
-	// 		"ended":  time.Now(),
-	// 		"output": "Request's Vault AppRole authentication returned no Auth token",
-	// 	})
-	// 	return
-	// }
-	// token := (*resp.Auth).ClientToken
-
-	// Authenticate with Vault using newly acquired token
+	// Set authenticated token
 	client.SetToken(token)
 
 	defer func() {
@@ -466,7 +433,6 @@ func (job *Job) runContainer() error {
 	}
 	imgAlreadyPulled := false
 	for _, img := range imgList {
-		log.Printf("img: %v", img.RepoTags[0])
 		if img.RepoTags[0] == job.ContainerImage {
 			imgAlreadyPulled = true
 		}
@@ -479,22 +445,23 @@ func (job *Job) runContainer() error {
 
 	if !imgAlreadyPulled || imgAgeDays > 1 {
 		// reader, err := cli.ImagePull(ctx, "docker.io/library/busybox", types.ImagePullOptions{})
-		reader, err2 := cli.ImagePull(ctx, imgRef, types.ImagePullOptions{})
+		_, err2 := cli.ImagePull(ctx, imgRef, types.ImagePullOptions{})
 		if err2 != nil {
 			return err2
 		}
-		io.Copy(os.Stdout, reader)
+		// io.Copy(os.Stdout, reader)
 
 		jobQueues.PulledImages[job.ContainerImage] = PulledImage{When: time.Now()}
-	} else {
-		log.Printf("Image %s already pulled, age: %d", job.ContainerImage, imgAgeDays)
 	}
+	// } else {
+	// 	log.Printf("Image %s already pulled, age: %d", job.ContainerImage, imgAgeDays)
 
 	cfg := container.Config{
 		Image: job.ContainerImage,
 		// Cmd:   []string{"echo", "hello world"},
-		Cmd: job.Run,
-		Tty: true,
+		Cmd:  job.Run,
+		Tty:  true,
+		User: "1000:1000",
 	}
 
 	if len(job.EntryPoint) != 0 {
@@ -509,6 +476,7 @@ func (job *Job) runContainer() error {
 	// Copy content into container prior to start it
 	opts := types.CopyToContainerOptions{
 		AllowOverwriteDirWithFile: true,
+		// CopyUIDGID:                false,
 	}
 	err = cli.CopyToContainer(ctx, resp.ID, "/", job.contentRdr, opts)
 	if err != nil {
@@ -538,12 +506,13 @@ func (job *Job) runContainer() error {
 
 	var buf bytes.Buffer
 	io.Copy(&buf, out)
-	fmt.Println(buf.String())
+	// fmt.Println(buf.String())
 
 	job.updateQueue(bson.M{
-		"status": "success",
-		"ended":  time.Now(),
-		"output": buf.String(),
+		"status":      "success",
+		"ended":       time.Now(),
+		"output":      buf.String(),
+		"return_code": status,
 	})
 
 	rmOpts := types.ContainerRemoveOptions{

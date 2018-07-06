@@ -10,6 +10,5 @@
     "field_1@secret/data/my-form.field1",
     "field_2@secret/data/my-form.field2",
     "field_3@secret/data/my-form.field3"
-  ],
-  "secret_id": "21797b7e-589b-af25-a0e3-341974e5992b"
+  ]
 }

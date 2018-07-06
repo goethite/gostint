@@ -1,3 +1,22 @@
+/*
+Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
+
+This file is part of goswim.
+
+goswim is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+goswim is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package main
 
 import (
@@ -9,7 +28,6 @@ import (
 	"github.com/gbevan/goswim/approle"
 	"github.com/gbevan/goswim/jobqueues"
 	"github.com/gbevan/goswim/pingclean"
-	"github.com/gbevan/goswim/v1/doc"
 	"github.com/gbevan/goswim/v1/job"
 	"github.com/globalsign/mgo"
 	"github.com/go-chi/chi"
@@ -100,16 +118,19 @@ func ErrInvalidRequest(err error) render.Renderer {
 }
 
 func authenticate(next http.Handler) http.Handler {
-	log.Println("in authenticate middleware setup")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("authenticate handler hdr: %v", r.Header["X-Secret-Token"][0])
-
 		secretID := r.Header["X-Secret-Token"][0]
-		_, _, err := approle.Authenticate(appRoleID, secretID)
+		unusedToken, client, err := approle.Authenticate(appRoleID, secretID)
 		if err != nil {
 			log.Printf("Authentication Failure with AppRole: %v", err)
 			render.Render(w, r, ErrInvalidRequest(err))
 			return
+		}
+		client.SetToken(unusedToken)
+		// Revoke the unused token
+		_, err = client.Logical().Write("auth/token/revoke-self", nil)
+		if err != nil {
+			log.Printf("Error: revoking token after job completed: %s", err)
 		}
 
 		ctx := context.WithValue(r.Context(), "authenticated", true)
@@ -129,7 +150,6 @@ func Routes() *chi.Mux {
 	)
 
 	router.Route("/v1", func(r chi.Router) {
-		r.Mount("/api/doc", doc.Routes())
 		r.Mount("/api/job", job.Routes(GetDb()))
 	})
 

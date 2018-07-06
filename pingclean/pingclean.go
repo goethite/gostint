@@ -1,7 +1,25 @@
+/*
+Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
+
+This file is part of goswim.
+
+goswim is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+goswim is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package pingclean
 
 import (
-	"log"
 	"math/rand"
 	"time"
 
@@ -35,7 +53,6 @@ type Node struct {
 }
 
 func wakeup() {
-	log.Println("wakeup")
 	// ping db 'nodes' collection using uuid as clean, with current time stamp
 	db := pingClean.Db
 	nodes := db.C("nodes")
@@ -61,13 +78,11 @@ func wakeup() {
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("ns: %v", ns)
 
 	ids := []string{}
 	for _, n := range ns {
 		ids = append(ids, n.ID)
 	}
-	log.Printf("ids: %v", ids)
 
 	chg := mgo.Change{
 		Update:    bson.M{"$set": bson.M{"status": "unknown"}},
@@ -80,7 +95,6 @@ func wakeup() {
 			panic(err)
 		}
 	}
-	// log.Printf("jobs: %v", jobs)
 
 	// clean up nodes
 	nodes.RemoveAll(bson.M{"_id": bson.M{"$in": ids}})

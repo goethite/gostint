@@ -1,7 +1,25 @@
+/*
+Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
+
+This file is part of goswim.
+
+goswim is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+goswim is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package job
 
 import (
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -36,7 +54,8 @@ func Routes(db *mgo.Database) *chi.Mux {
 		Db: db,
 	}
 	router := chi.NewRouter()
-	router.Post("/", PostJob)
+	router.Get("/{jobID}", getJob)
+	router.Post("/", postJob)
 	return router
 }
 
@@ -63,11 +82,56 @@ func ErrInvalidRequest(err error) render.Renderer {
 	}
 }
 
-// PostJob post a job to the fifo queue
+type getResponse struct {
+	ID             string    `json:"_id"`
+	Status         string    `json:"status"`
+	NodeUUID       string    `json:"node_uuid"`
+	Qname          string    `json:"qname"`
+	ContainerImage string    `json:"container_image"`
+	Submitted      time.Time `json:"submitted"`
+	Started        time.Time `json:"started"`
+	Ended          time.Time `json:"ended"`
+	Output         string    `json:"output"`
+	ReturnCode     int       `json:"return_code"`
+}
+
+func getJob(w http.ResponseWriter, req *http.Request) {
+	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
+	coll := jobRouter.Db.C("queues")
+	var job JobRequest
+	err := coll.FindId(bson.ObjectIdHex(jobID)).One(&job)
+	if err != nil {
+		if err.Error() == "not found" {
+			http.Error(w, http.StatusText(404), 404)
+			return
+		}
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+	render.JSON(w, req, getResponse{
+		ID:             job.ID.Hex(),
+		Status:         job.Status,
+		NodeUUID:       job.NodeUUID,
+		Qname:          job.Qname,
+		ContainerImage: job.ContainerImage,
+		Submitted:      job.Submitted,
+		Started:        job.Started,
+		Ended:          job.Ended,
+		Output:         job.Output,
+		ReturnCode:     job.ReturnCode,
+	})
+}
+
+type postResponse struct {
+	ID     string `json:"_id"`
+	Status string `json:"status"`
+	Qname  string `json:"qname"`
+}
+
+// postJob post a job to the fifo queue
 // curl http://127.0.0.1:3232/v1/api/job -X POST -d '{"qname":"play", "jobtype": "ansible", "content": "base64 here", "run": "hello.yml"}'
 // -> {"qname":"play","jobtype":"ansible","content":"base64 here","run":"hello.yml"}
-
-func PostJob(w http.ResponseWriter, req *http.Request) {
+func postJob(w http.ResponseWriter, req *http.Request) {
 	data := &JobRequest{}
 	if err := render.Bind(req, data); err != nil {
 		render.Render(w, req, ErrInvalidRequest(err))
@@ -79,15 +143,15 @@ func PostJob(w http.ResponseWriter, req *http.Request) {
 	newID := bson.NewObjectId()
 	jobRequest := job
 	jobRequest.ID = newID
+	jobRequest.SecretID = req.Header["X-Secret-Token"][0]
 	err := coll.Insert(jobRequest)
 	if err != nil {
 		panic(err)
 	}
-	// log.Printf("ci: %v\n", ci)
-	log.Printf("PostJob() Inserted id: %s\n", newID)
 
-	// queue := jobqueues.GetQueue("play")
-	// queue.Q.Add(job)
-	// queue.Wake <- true
-	render.JSON(w, req, jobRequest)
+	render.JSON(w, req, postResponse{
+		ID:     jobRequest.ID.Hex(),
+		Status: jobRequest.Status,
+		Qname:  jobRequest.Qname,
+	})
 }

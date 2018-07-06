@@ -1,3 +1,22 @@
+/*
+Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
+
+This file is part of goswim.
+
+goswim is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+goswim is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 package approle
 
 import (
@@ -6,16 +25,6 @@ import (
 
 	"github.com/hashicorp/vault/api"
 )
-
-// // AuthError to return status and message
-// type AuthError struct {
-// 	Status string
-// 	Msg    string
-// }
-
-// func (e AuthError) Error() string {
-// 	return fmt.Sprintf("%s: %s", e.Status, e.Msg)
-// }
 
 // Authenticate using our AppRoleID and given SecretID with Vault
 func Authenticate(appRoleID string, secretID string) (string, *api.Client, error) {
