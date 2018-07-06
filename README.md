@@ -15,6 +15,7 @@ At this stage this project is a proof-of-concept and under development...
 ```
 $ vagrant up
 $ vagrant ssh
+vagrant~$ go get github.com/gbevan/godo/cmd/godo
 vagrant~$ cd go/src/github.com/gbevan/goswim/
 vagrant~$ dep ensure
 vagrant~$ godo [--watch]
