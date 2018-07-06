@@ -41,6 +41,5 @@
   version = "0.10.3"
 
 [[constraint]]
-  name = "github.com/docker/docker"
-  version = "v17.03.2-ce"
-  # version = "1.13.1"
+  name = "docker.io/go-docker"
+  version = "1.0.0"

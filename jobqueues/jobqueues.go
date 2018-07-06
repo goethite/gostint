@@ -32,9 +32,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	client "docker.io/go-docker"
+	"docker.io/go-docker/api/types"
+	"docker.io/go-docker/api/types/container"
 	"github.com/gbevan/goswim/approle"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -476,7 +476,7 @@ func (job *Job) runContainer() error {
 	// Copy content into container prior to start it
 	opts := types.CopyToContainerOptions{
 		AllowOverwriteDirWithFile: true,
-		// CopyUIDGID:                false,
+		// CopyUIDGID:                true,
 	}
 	err = cli.CopyToContainer(ctx, resp.ID, "/", job.contentRdr, opts)
 	if err != nil {
@@ -493,10 +493,20 @@ func (job *Job) runContainer() error {
 		return err
 	}
 
-	status, err := cli.ContainerWait(ctx, resp.ID)
-	if err != nil {
-		return err
+	// status, err := cli.ContainerWait(ctx, resp.ID)
+	log.Println("Before ContainerWait")
+	statusCh, errCh := cli.ContainerWait(ctx, resp.ID, "")
+	log.Println("After ContainerWait")
+	var statusBody container.ContainerWaitOKBody
+	select {
+	case err2 := <-errCh:
+		if err2 != nil {
+			return err2
+		}
+	case statusBody = <-statusCh:
 	}
+	log.Println("After statusCh")
+	status := statusBody.StatusCode
 	log.Printf("status from container wait: %d", status)
 
 	out, err := cli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
