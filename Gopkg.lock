@@ -38,17 +38,6 @@
   version = "v0.4.8"
 
 [[projects]]
-  name = "github.com/davars/godo"
-  packages = [
-    "glob",
-    "util",
-    "watcher",
-    "watcher/fswatch"
-  ]
-  revision = "ee2d4f350940505276943f04aa6468d0124a2f54"
-  version = "v2.1.1"
-
-[[projects]]
   name = "github.com/docker/distribution"
   packages = [
     "digestset",
@@ -74,9 +63,15 @@
 
 [[projects]]
   name = "github.com/gbevan/godo"
-  packages = ["."]
-  revision = "ee2d4f350940505276943f04aa6468d0124a2f54"
-  version = "v2.1.1"
+  packages = [
+    ".",
+    "glob",
+    "util",
+    "watcher",
+    "watcher/fswatch"
+  ]
+  revision = "ce69f36504418a5ebd98f6883ffb2f3ccded9440"
+  version = "v2.1.3"
 
 [[projects]]
   branch = "master"
@@ -347,6 +342,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "50a313ebc9f365800301ed7c11ac1919677ed359bde25a06e7a35c2d033c8d74"
+  inputs-digest = "a82adc9587c991d938722ce8a648f00c790ab459b3549fda214b65432629a40e"
   solver-name = "gps-cdcl"
   solver-version = 1

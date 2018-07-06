@@ -77,7 +77,7 @@ func ErrInvalidRequest(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
 		HTTPStatusCode: 400,
-		StatusText:     "Invalid request.",
+		StatusText:     "Invalid job request.",
 		ErrorText:      err.Error(),
 	}
 }
