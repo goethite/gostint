@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/gbevan/goswim/approle"
 	"github.com/gbevan/goswim/jobqueues"
 	"github.com/gbevan/goswim/pingclean"
 	"github.com/gbevan/goswim/v1/doc"
@@ -74,6 +76,47 @@ func getDbCreds() (string, string, error) {
 	return username, password, nil
 }
 
+type ErrResponse struct {
+	Err            error `json:"-"` // low-level runtime error
+	HTTPStatusCode int   `json:"-"` // http response status code
+
+	StatusText string `json:"status"`          // user-level status message
+	AppCode    int64  `json:"code,omitempty"`  // application-specific error code
+	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
+}
+
+func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	render.Status(r, e.HTTPStatusCode)
+	return nil
+}
+
+func ErrInvalidRequest(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 400,
+		StatusText:     "Invalid request.",
+		ErrorText:      err.Error(),
+	}
+}
+
+func authenticate(next http.Handler) http.Handler {
+	log.Println("in authenticate middleware setup")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("authenticate handler hdr: %v", r.Header["X-Secret-Token"][0])
+
+		secretID := r.Header["X-Secret-Token"][0]
+		_, _, err := approle.Authenticate(appRoleID, secretID)
+		if err != nil {
+			log.Printf("Authentication Failure with AppRole: %v", err)
+			render.Render(w, r, ErrInvalidRequest(err))
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "authenticated", true)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(
@@ -82,6 +125,7 @@ func Routes() *chi.Mux {
 		middleware.DefaultCompress,
 		middleware.RedirectSlashes,
 		middleware.Recoverer,
+		authenticate,
 	)
 
 	router.Route("/v1", func(r chi.Router) {

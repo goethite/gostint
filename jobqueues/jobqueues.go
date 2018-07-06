@@ -17,6 +17,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/gbevan/goswim/approle"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/hashicorp/vault/api"
@@ -96,9 +97,9 @@ func requestHandler() {
 
 			chg := mgo.Change{
 				Update: bson.M{"$set": bson.M{
-					"node_uuid": jobQueues.NodeUUID,
-					"status":    "running",
-					"started":   time.Now(),
+					// "node_uuid": jobQueues.NodeUUID,
+					"status": "running",
+					// "started": time.Now(),
 				}},
 				ReturnNew: false,
 			}
@@ -115,13 +116,27 @@ func requestHandler() {
 				log.Printf("Error: Pop from queue %s failed: %v\n", q, err)
 			}
 			// log.Printf("ci: %v", ci)
+			// log.Println("After ci")
 
 			// NOTE: if the returned job has status = "queued", then this has just
 			// been atomically pop'd from the FIFO stack
 			if job.Status != "queued" {
 				break
 			}
-			// log.Printf("j: %s", job.String())
+			// log.Printf("id: %v", ci.InsertedId)
+
+			// set node uuid that we are running on
+			chg2 := mgo.Change{
+				Update: bson.M{"$set": bson.M{
+					"node_uuid": jobQueues.NodeUUID,
+					"started":   time.Now(),
+				}},
+				ReturnNew: true,
+			}
+			_, err = c.FindId(job.ID).Apply(chg2, &job)
+			if err != nil {
+				log.Printf("Error: Update to node uuid on queue %s failed: %v\n", q, err)
+			}
 
 			go job.runRequest()
 		}
@@ -150,61 +165,71 @@ func (job *Job) updateQueue(u bson.M) (*Job, error) {
 func (job *Job) runRequest() {
 	log.Printf("Run %s", (*job).String())
 
+	token, client, err := approle.Authenticate(jobQueues.AppRoleID, job.SecretID)
+	if err != nil {
+		job.updateQueue(bson.M{
+			"status": "notauthorised",
+			"ended":  time.Now(),
+			"output": err.Error(),
+		})
+		return
+	}
+
 	/////////////////////////////////////
 	// AppRole Authenticate
 	// Get Token for passed secret_id
-	if job.SecretID == "" {
-		job.updateQueue(bson.M{
-			"status": "notauthorised",
-			"ended":  time.Now(),
-			"output": "Vault SecretID was not provided in request",
-		})
-		return
-	}
-	appRoleID := jobQueues.AppRoleID
-
-	client, err := api.NewClient(&api.Config{
-		Address: os.Getenv("VAULT_ADDR"),
-	})
-	if err != nil {
-		job.updateQueue(bson.M{
-			"status": "notauthorised",
-			"ended":  time.Now(),
-			"output": fmt.Sprintf("Failed create vault client api: %s", err),
-		})
-		return
-	}
-
-	// Authenticate this request using AppRole RoleID and SecretID
-	data := map[string]interface{}{
-		"role_id":   appRoleID,
-		"secret_id": job.SecretID,
-	}
-	resp, err := client.Logical().Write("auth/approle/login", data)
-	if err != nil {
-		job.updateQueue(bson.M{
-			"status": "notauthorised",
-			"ended":  time.Now(),
-			"output": fmt.Sprintf("Request failed AppRole authentication with vault: %s", err),
-		})
-		return
-	}
-	if resp.Auth == nil {
-		job.updateQueue(bson.M{
-			"status": "notauthorised",
-			"ended":  time.Now(),
-			"output": "Request's Vault AppRole authentication returned no Auth token",
-		})
-		return
-	}
-	token := (*resp.Auth).ClientToken
+	// if job.SecretID == "" {
+	// 	job.updateQueue(bson.M{
+	// 		"status": "notauthorised",
+	// 		"ended":  time.Now(),
+	// 		"output": "Vault SecretID was not provided in request",
+	// 	})
+	// 	return
+	// }
+	// appRoleID := jobQueues.AppRoleID
+	//
+	// client, err := api.NewClient(&api.Config{
+	// 	Address: os.Getenv("VAULT_ADDR"),
+	// })
+	// if err != nil {
+	// 	job.updateQueue(bson.M{
+	// 		"status": "notauthorised",
+	// 		"ended":  time.Now(),
+	// 		"output": fmt.Sprintf("Failed create vault client api: %s", err),
+	// 	})
+	// 	return
+	// }
+	//
+	// // Authenticate this request using AppRole RoleID and SecretID
+	// data := map[string]interface{}{
+	// 	"role_id":   appRoleID,
+	// 	"secret_id": job.SecretID,
+	// }
+	// resp, err := client.Logical().Write("auth/approle/login", data)
+	// if err != nil {
+	// 	job.updateQueue(bson.M{
+	// 		"status": "notauthorised",
+	// 		"ended":  time.Now(),
+	// 		"output": fmt.Sprintf("Request failed AppRole authentication with vault: %s", err),
+	// 	})
+	// 	return
+	// }
+	// if resp.Auth == nil {
+	// 	job.updateQueue(bson.M{
+	// 		"status": "notauthorised",
+	// 		"ended":  time.Now(),
+	// 		"output": "Request's Vault AppRole authentication returned no Auth token",
+	// 	})
+	// 	return
+	// }
+	// token := (*resp.Auth).ClientToken
 
 	// Authenticate with Vault using newly acquired token
 	client.SetToken(token)
 
 	defer func() {
 		// Revoke the ephemeral token
-		resp, err = client.Logical().Write("auth/token/revoke-self", nil)
+		_, err = client.Logical().Write("auth/token/revoke-self", nil)
 		if err != nil {
 			log.Printf("Error: revoking token after job completed: %s", err)
 		}

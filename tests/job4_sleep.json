@@ -3,7 +3,7 @@
   "container_image": "busybox",
   "content": "",
   "run": [
-    "env"
+    "sleep", "300"
   ],
   "secret_refs": [
     "mysecret@secret/data/my-secret.my-value",

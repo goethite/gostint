@@ -84,7 +84,7 @@ func PostJob(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 	// log.Printf("ci: %v\n", ci)
-	log.Printf("Inserted id: %s\n", newID)
+	log.Printf("PostJob() Inserted id: %s\n", newID)
 
 	// queue := jobqueues.GetQueue("play")
 	// queue.Q.Add(job)

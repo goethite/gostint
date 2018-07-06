@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/gbevan/goswim/jobqueues"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	uuid "github.com/satori/go.uuid"
@@ -50,25 +51,46 @@ func wakeup() {
 
 	// scan nodes for stale node (no longer pinging)
 	//   if stale, set all running jobs in queues for that node's uuid to have
-	//   status=unknown, rest in queue to aborted
+	//   status=unknown
 	var ns []Node
+	now := time.Now()
+	threshold := now.Add(time.Duration(-1) * time.Minute)
 	err = nodes.Find(bson.M{
-		"last_seen": bson.M{"$lt": time.Now().Sub(10 * time.Minute)},
+		"last_seen": bson.M{"$lt": threshold},
 	}).All(&ns)
+	if err != nil {
+		panic(err)
+	}
+	log.Printf("ns: %v", ns)
 
-	// var jobs []jobqueues.Job
-	// err = queues.Find(bson.M{
-	// 	"status": "running",
-	// }).All(&jobs)
-	// if err != nil {
-	// 	log.Printf("Find stale queues error: %s", err)
-	// }
-	// log.Printf("Running: %v", jobs)
+	ids := []string{}
+	for _, n := range ns {
+		ids = append(ids, n.ID)
+	}
+	log.Printf("ids: %v", ids)
+
+	chg := mgo.Change{
+		Update:    bson.M{"$set": bson.M{"status": "unknown"}},
+		ReturnNew: true,
+	}
+	var jobs []jobqueues.Job
+	_, err = queues.Find(bson.M{"node_uuid": bson.M{"$in": ids}}).Apply(chg, &jobs)
+	if err != nil {
+		if err.Error() != "not found" {
+			panic(err)
+		}
+	}
+	// log.Printf("jobs: %v", jobs)
+
+	// clean up nodes
+	nodes.RemoveAll(bson.M{"_id": bson.M{"$in": ids}})
 }
 
 func interval() {
-	// wait 1 min + random upto another 1 min (splay)
-	r := rand.Intn(int(time.Minute))
-	time.Sleep(time.Duration(r)*time.Nanosecond + time.Minute)
-	wakeup()
+	for {
+		// wait 1 min + random upto another 1 min (splay)
+		r := rand.Intn(int(time.Minute))
+		time.Sleep(time.Duration(r)*time.Nanosecond + time.Minute)
+		wakeup()
+	}
 }
