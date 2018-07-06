@@ -88,3 +88,6 @@ Could share/mount unix domain socket and any Vault Token / secrets into the
 task container.  Any secrets could be auto-"deleted" when read by the Fuse
 subsystem in goswim - i.e. a one-shot share/read operation.
 Attempts to re-read a secret should log an alert.
+
+Update: Chose to simplify by using Docker api client's `CopyToContainer()`
+to unpack a TAR file (in mem) into the target container.
