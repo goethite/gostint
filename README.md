@@ -1,8 +1,13 @@
 # goswim - A Shallow RESTful api for Ansible, Terraform ...
 ... and basically anything you would like to run as jobs in docker containered
-environments, authenticated with Hashicorp Vault AppRoles.
+environments, authenticated with Hashicorp Vault AppRoles, and driven by a
+REST API.
+
+Goal is to be a Highly Available and Scaleable API for automation.
 
 See [Concept Ideas](docs/Concept_Ideas.md)
+
+At this stage this project is a proof-of-concept and under development...
 
 ## Dev Notes
 
@@ -11,7 +16,8 @@ See [Concept Ideas](docs/Concept_Ideas.md)
 $ vagrant up
 $ vagrant ssh
 vagrant~$ cd go/src/github.com/gbevan/goswim/
-vagrant~$ godo --watch
+vagrant~$ dep ensure
+vagrant~$ godo [--watch]
 ```
 
 #### Accessing mongodb in vagrant
