@@ -54,7 +54,7 @@ lease_renewable    true
 password           A1a-4bHwB9x6vd6irH51
 username           v-token-goswim-dbauth-role-g0YkRCwmxnbnTcFh0oQ8-1530388299
 ```
-See `Gododir/main.go` got dev testing the above.
+See [godo](Gododir/main.go) for dev testing the above.
 
 ### Get a SecretId for the goswim-role for a request
 ```
