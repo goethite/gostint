@@ -576,7 +576,11 @@ func (job *Job) Kill() error {
 		return err
 	}
 
-	timeout := time.Duration(30) * time.Second
+	job.updateQueue(bson.M{
+		"status": "stopping",
+	})
+
+	timeout := time.Duration(1) * time.Second
 
 	err = cli.ContainerStop(ctx, job.ContainerID, &timeout)
 	if err != nil {

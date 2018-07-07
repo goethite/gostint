@@ -167,6 +167,12 @@ func postJob(w http.ResponseWriter, req *http.Request) {
 	})
 }
 
+type killResponse struct {
+	ID          string `json:"_id"`
+	ContainerID string `json:"container_id"`
+	Status      string `json:"status"`
+}
+
 func killJob(w http.ResponseWriter, req *http.Request) {
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
 	log.Printf("killJob ID: %s", jobID)
@@ -184,5 +190,12 @@ func killJob(w http.ResponseWriter, req *http.Request) {
 	err = job.Kill()
 	if err != nil {
 		render.Render(w, req, ErrInvalidRequest(err))
+		return
 	}
+
+	render.JSON(w, req, killResponse{
+		ID:          job.ID.Hex(),
+		ContainerID: job.ContainerID,
+		Status:      job.Status,
+	})
 }

@@ -120,13 +120,14 @@ The url path takes the `_id` hex string returned from submitting the job as
 a key.
 Returned statuses can be:
 
-| Status          | Description                          |
-|-----------------|--------------------------------------|
-| `queued`        | Job has been queued                  |
-| `notauthorised` | Job failed authentication with Vault |
-| `running`       | Job is currently running             |
-| `failed`        | Job has failed                       |
-| `success`       | Job has succeeded                    |
+| Status          | Description                              |
+|-----------------|------------------------------------------|
+| `queued`        | Job has been queued                      |
+| `notauthorised` | Job failed authentication with Vault     |
+| `running`       | Job is currently running                 |
+| `stopping`      | Job is currently stopping for a kill req |
+| `failed`        | Job has failed                           |
+| `success`       | Job has succeeded                        |
 
 ### Creating content to inject into the container for execution
 
