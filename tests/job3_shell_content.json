@@ -1,5 +1,6 @@
 {
   "qname": "play",
+  "container_image": "busybox",
   "content": "targz,H4sIAIKlQFsAA+3VQU+DMBgGYM79Fd/mzQRoCwxj4sGYqAfjwWg8GsAKJIUulI3t3wvJZoxG54WZZe9zaYE2bXj7gec7o+O9OIqGVsQR/9xuOSIIRBzKQISivx8HMnQoGn9rjrOwbdIQOala/jpu1/MD5fm5sV1ZjXkM/pi/5ELKkPfjBJ9Jifz34SP/QmltPFuMsMau/KWQX/KXMood4iPs5Zsjz/9k4qdl7duC3BW7u7y/ubjynh6v3TPGVFYYmt4O54KeTaNfJ1Om6iWbW3LVm2ZM9x1N/qaTPNDmLJFvVdao1p6yLGk/rrx11U+al3VObkYBdV3n5cbkWnmZqdh/v4njtK3/IZyx1hhqfBaGP3//A7H5/4uYR7O+/kXQN6j/PchM3SZlrZqXskpydU7pwq5Ts0I5AgAAAAAAAAAAAAAAAAAclnfkWD1rACgAAA==",
   "run": [
     "/goswim/hello.sh"
