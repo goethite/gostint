@@ -163,6 +163,9 @@ func Routes() *chi.Mux {
 }
 
 func main() {
+
+	log.Println("Starting goswim service")
+
 	username, password, err := getDbCreds()
 	if err != nil {
 		panic(err)
@@ -184,15 +187,6 @@ func main() {
 
 	// Create RESTful routes
 	router := Routes()
-
-	walkFunc := func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
-		log.Printf("%s %s\n", method, route)
-		return nil
-	}
-
-	if err := chi.Walk(router, walkFunc); err != nil {
-		log.Panicf("Logging err: %s\n", err.Error())
-	}
 
 	// Start job queues
 	jobqueues.Init(goswimDb, appRoleID, nodeUuid)
