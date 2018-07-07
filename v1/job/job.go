@@ -20,6 +20,7 @@ along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
 package job
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -99,6 +100,10 @@ type getResponse struct {
 
 func getJob(w http.ResponseWriter, req *http.Request) {
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
+	if jobID == "" {
+		render.Render(w, req, ErrInvalidRequest(errors.New("job ID missing from GET path")))
+		return
+	}
 	coll := jobRouter.Db.C("queues")
 	var job JobRequest
 	err := coll.FindId(bson.ObjectIdHex(jobID)).One(&job)

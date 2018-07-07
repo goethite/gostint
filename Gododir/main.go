@@ -36,6 +36,11 @@ func tasks(p *do.Project) {
 	p.Task("default", do.S{"gettoken"}, func(c *do.Context) {
 		c.Start(`GOSWIM_DBAUTH_TOKEN={{.token}} GOSWIM_DBURL=127.0.0.1:27017 main.go`, do.M{"token": token})
 	}).Src("**/*.go")
+
+	// To be run alongside default to drive BATS tests against the instance
+	p.Task("test", nil, func(c *do.Context) {
+		c.Bash("cd tests/bats && run-parts --regex=[0-9].* .")
+	})
 }
 
 func main() {
