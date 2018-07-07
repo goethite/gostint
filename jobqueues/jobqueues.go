@@ -77,6 +77,7 @@ type Job struct {
 	SecretID       string        `json:"secret_id"       bson:"secret_id"`
 	SecretRefs     []string      `json:"secret_refs"     bson:"secret_refs"`
 	ContOnWarnings bool          `json:"cont_on_warnings" bson:"cont_on_warnings"`
+	ContainerID    string        `json:"container_id"    bson:"container_id"`
 	contentRdr     io.Reader
 	secretsRdr     io.Reader
 	// ReturnCode     int           `json:"return_code"     bson:"return_code,omitempty"`
@@ -482,6 +483,22 @@ func (job *Job) runContainer() error {
 		return err
 	}
 
+	job.updateQueue(bson.M{
+		"container_id": resp.ID,
+	})
+
+	defer func() {
+		log.Printf("Removing container %s", resp.ID)
+		rmOpts := types.ContainerRemoveOptions{
+			RemoveVolumes: true,
+			RemoveLinks:   false,
+			Force:         true,
+		}
+		if errD := cli.ContainerRemove(ctx, resp.ID, rmOpts); errD != nil {
+			log.Printf("Error: removing container: %s", errD)
+		}
+	}()
+
 	// Copy content into container prior to start it
 	opts := types.CopyToContainerOptions{
 		AllowOverwriteDirWithFile: true,
@@ -535,13 +552,35 @@ func (job *Job) runContainer() error {
 		"return_code": status,
 	})
 
-	rmOpts := types.ContainerRemoveOptions{
-		RemoveVolumes: true,
-		RemoveLinks:   false,
-		Force:         true,
+	// rmOpts := types.ContainerRemoveOptions{
+	// 	RemoveVolumes: true,
+	// 	RemoveLinks:   false,
+	// 	Force:         true,
+	// }
+	// if err := cli.ContainerRemove(ctx, resp.ID, rmOpts); err != nil {
+	// 	log.Printf("Error: removing container: %s", err)
+	// }
+
+	return nil
+}
+
+func (job *Job) Kill() error {
+	if job.ContainerID == "" {
+		return errors.New("job.ContainerID is missing")
 	}
-	if err := cli.ContainerRemove(ctx, resp.ID, rmOpts); err != nil {
-		log.Printf("Error: removing container: %s", err)
+	log.Printf("Stopping container %s", job.ContainerID)
+
+	ctx := context.Background()
+	cli, err := client.NewEnvClient()
+	if err != nil {
+		return err
+	}
+
+	timeout := time.Duration(30) * time.Second
+
+	err = cli.ContainerStop(ctx, job.ContainerID, &timeout)
+	if err != nil {
+		return err
 	}
 
 	return nil

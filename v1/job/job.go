@@ -20,6 +20,7 @@ along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
 package job
 
 import (
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -56,6 +57,7 @@ func Routes(db *mgo.Database) *chi.Mux {
 	router := chi.NewRouter()
 	router.Get("/{jobID}", getJob)
 	router.Post("/", postJob)
+	router.Post("/kill/{jobID}", killJob)
 	return router
 }
 
@@ -163,4 +165,24 @@ func postJob(w http.ResponseWriter, req *http.Request) {
 		Status: jobRequest.Status,
 		Qname:  jobRequest.Qname,
 	})
+}
+
+func killJob(w http.ResponseWriter, req *http.Request) {
+	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
+	log.Printf("killJob ID: %s", jobID)
+	coll := jobRouter.Db.C("queues")
+	var job jobqueues.Job
+	err := coll.FindId(bson.ObjectIdHex(jobID)).One(&job)
+	if err != nil {
+		if err.Error() == "not found" {
+			http.Error(w, http.StatusText(404), 404)
+			return
+		}
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+	err = job.Kill()
+	if err != nil {
+		render.Render(w, req, ErrInvalidRequest(err))
+	}
 }

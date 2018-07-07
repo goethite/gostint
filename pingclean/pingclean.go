@@ -89,7 +89,10 @@ func wakeup() {
 		ReturnNew: true,
 	}
 	var jobs []jobqueues.Job
-	_, err = queues.Find(bson.M{"node_uuid": bson.M{"$in": ids}}).Apply(chg, &jobs)
+	_, err = queues.Find(bson.M{
+		"node_uuid": bson.M{"$in": ids},
+		"status":    "running",
+	}).Apply(chg, &jobs)
 	if err != nil {
 		if err.Error() != "not found" {
 			panic(err)
