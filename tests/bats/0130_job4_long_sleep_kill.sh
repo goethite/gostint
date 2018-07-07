@@ -5,7 +5,7 @@
   SECRETID=$(vault write -f auth/approle/role/goswim-role/secret-id | grep "^secret_id " | awk '{ print $2; }')
   echo "$SECRETID" > $BATS_TMPDIR/secretid
 
-  J="$(curl -s http://127.0.0.1:3232/v1/api/job --header "X-Secret-Token: $SECRETID" -X POST -d @../job4_sleep.json | tee $BATS_TMPDIR/job4.json)"
+  J="$(curl -k -s https://127.0.0.1:3232/v1/api/job --header "X-Secret-Token: $SECRETID" -X POST -d @../job4_sleep.json | tee $BATS_TMPDIR/job4.json)"
   [ "$J" != "" ]
 }
 
@@ -26,7 +26,7 @@
 
   ID=$(echo $J | jq ._id -r)
 
-  R="$(curl -s http://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
+  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
   echo "R:$R" >&2
   status=$(echo $R | jq .status -r)
 
@@ -44,7 +44,7 @@
   for i in {1..20}
   do
     sleep 1
-    R="$(curl -s http://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
+    R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
     echo "R:$R" >&2
     status=$(echo $R | jq .status -r)
     if [ "$status" != "queued" ]
@@ -63,7 +63,7 @@
 
   ID=$(echo $J | jq ._id -r)
 
-  R="$(curl -s http://127.0.0.1:3232/v1/api/job/kill/$ID -X POST --header "X-Secret-Token: $SECRETID")"
+  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/kill/$ID -X POST --header "X-Secret-Token: $SECRETID")"
   echo "R:$R" >&2
   status=$(echo $R | jq .status -r)
 
@@ -81,7 +81,7 @@
   for i in {1..20}
   do
     sleep 1
-    R="$(curl -s http://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
+    R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
     echo "R:$R" >&2
     status=$(echo $R | jq .status -r)
     if [ "$status" != "stopping" ]

@@ -38,6 +38,9 @@ export MYPATH=~vagrant/go/src/github.com/gbevan/goswim
 . $MYPATH/scripts/init_mongodb.sh
 . $MYPATH/scripts/init_vault.sh
 
+echo "Creating self signed cert"
+su - vagrant -c "echo -e 'GB\n\n\ngoswim\n\n$(hostname)\n\n' | openssl req  -nodes -new -x509  -keyout go/src/github.com/gbevan/goswim/etc/key.pem -out go/src/github.com/gbevan/goswim/etc/cert.pem -days 365"
+
 # Ready!
 echo '========================================================='
 echo 'Vault server running in DEV mode.  root-token-id is root'

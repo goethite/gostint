@@ -191,5 +191,10 @@ func main() {
 	// Start job queues
 	jobqueues.Init(goswimDb, appRoleID, nodeUuid)
 
-	log.Fatal(http.ListenAndServe(":3232", router))
+	// log.Fatal(http.ListenAndServe(":3232", router))
+
+	// TODO: TLS
+	// Run crypto/tls/generate_cert.go to generate cert.pem and key.pem.
+	// See https://golang.org/src/crypto/tls/generate_cert.go
+	log.Fatal(http.ListenAndServeTLS(":3232", "etc/cert.pem", "etc/key.pem", router))
 }

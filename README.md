@@ -79,7 +79,7 @@ see `Gododir/main.go`
 
 ### Run containered Jobs using curl
 ```
-$ curl -s http://127.0.0.1:3232/v1/api/job \
+$ curl -k -s https://127.0.0.1:3232/v1/api/job \
   -X POST \
   -d @job3_shell_content.json \
   --header 'X-Secret-Token: 21797b7e-589b-af25-a0e3-341974e5992b' \
@@ -99,7 +99,7 @@ For some example job JSON files see [tests/](tests/)
 
 ### Retrieve Status and Results of a job using curl
 ```
-$ curl -s http://127.0.0.1:3232/v1/api/job/5b3f83d3559214025a198281 \
+$ curl -k -s https://127.0.0.1:3232/v1/api/job/5b3f83d3559214025a198281 \
   -X GET \
   --header 'X-Secret-Token: 21797b7e-589b-af25-a0e3-341974e5992b' \
   | jq
