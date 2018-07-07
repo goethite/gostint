@@ -432,7 +432,6 @@ func (job *Job) runContainer() error {
 	}
 
 	imgRef := fmt.Sprintf("docker.io/%s", job.ContainerImage)
-	log.Printf("imgRef: %s", imgRef)
 
 	// Get list of images on host
 	imgList, err := cli.ImageList(ctx, types.ImageListOptions{
@@ -488,7 +487,6 @@ func (job *Job) runContainer() error {
 		return err
 	}
 
-	log.Printf("job.contentRdr: %v", job.contentRdr)
 	// save contentRdr and secretsRdr as updateQueue() drops them from job
 	contentRdr := job.contentRdr
 	secretsRdr := job.secretsRdr
@@ -514,14 +512,12 @@ func (job *Job) runContainer() error {
 		AllowOverwriteDirWithFile: true,
 		// CopyUIDGID:                true,
 	}
-	log.Printf("contentRdr: %v", contentRdr)
 	err = cli.CopyToContainer(ctx, resp.ID, "/", contentRdr, opts)
 	if err != nil {
 		return err
 	}
 
 	// Copy secrets into container prior to start it
-	log.Printf("secretsRdr: %v", secretsRdr)
 	err = cli.CopyToContainer(ctx, resp.ID, "/", secretsRdr, opts)
 	if err != nil {
 		return err
