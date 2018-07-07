@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -454,17 +455,20 @@ func (job *Job) runContainer() error {
 
 	if !imgAlreadyPulled || imgAgeDays > 1 {
 		// reader, err := cli.ImagePull(ctx, "docker.io/library/busybox", types.ImagePullOptions{})
-		_, err2 := cli.ImagePull(ctx, imgRef, types.ImagePullOptions{})
+		reader, err2 := cli.ImagePull(ctx, imgRef, types.ImagePullOptions{})
 		if err2 != nil {
 			log.Printf("ImagePull imgRef: %s", imgRef)
 			return err2
 		}
-		// io.Copy(os.Stdout, reader)
+
+		// This is currently needed to ensure images are downloaded before we
+		// move on to creating containers...
+		io.Copy(os.Stdout, reader)
 
 		jobQueues.PulledImages[job.ContainerImage] = PulledImage{When: time.Now()}
+	} else {
+		log.Printf("Image %s already pulled, age: %d", job.ContainerImage, imgAgeDays)
 	}
-	// } else {
-	// 	log.Printf("Image %s already pulled, age: %d", job.ContainerImage, imgAgeDays)
 
 	cfg := container.Config{
 		Image: job.ContainerImage,

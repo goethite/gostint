@@ -20,6 +20,12 @@ vagrant~$ cd go/src/github.com/gbevan/goswim/
 vagrant~$ dep ensure
 vagrant~$ godo [--watch]
 ```
+in another terminal you can run the BATS tests:
+```
+$ vagrant ssh
+vagrant~$ cd go/src/github.com/gbevan/goswim/
+vagrant~$ godo test
+```
 
 #### Accessing mongodb in vagrant
 ```

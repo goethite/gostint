@@ -39,7 +39,7 @@ export MYPATH=~vagrant/go/src/github.com/gbevan/goswim
 . $MYPATH/scripts/init_vault.sh
 
 echo "Creating self signed cert"
-su - vagrant -c "echo -e 'GB\n\n\ngoswim\n\n$(hostname)\n\n' | openssl req  -nodes -new -x509  -keyout go/src/github.com/gbevan/goswim/etc/key.pem -out go/src/github.com/gbevan/goswim/etc/cert.pem -days 365"
+su - vagrant -c "echo -e 'GB\n\n\ngoswim\n\n$(hostname)\n\n' | openssl req  -nodes -new -x509  -keyout go/src/github.com/gbevan/goswim/etc/key.pem -out go/src/github.com/gbevan/goswim/etc/cert.pem -days 365 2>&1"
 
 # Ready!
 echo '========================================================='
