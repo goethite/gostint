@@ -21,6 +21,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -119,6 +120,11 @@ func ErrInvalidRequest(err error) render.Renderer {
 
 func authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := r.Header["X-Secret-Token"]; !ok {
+			log.Println("Missing X-Secret-Token")
+			render.Render(w, r, ErrInvalidRequest(errors.New("Missing X-Secret-Token")))
+			return
+		}
 		secretID := r.Header["X-Secret-Token"][0]
 		unusedToken, client, err := approle.Authenticate(appRoleID, secretID)
 		if err != nil {

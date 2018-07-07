@@ -25,6 +25,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -418,6 +419,12 @@ func (job *Job) runContainer() error {
 		return err
 	}
 
+	if job.ContainerImage == "" {
+		errmsg := "Error job.ContainerImage is empty"
+		log.Println(errmsg)
+		return errors.New(errmsg)
+	}
+
 	if strings.Index(job.ContainerImage, ":") == -1 {
 		job.ContainerImage = fmt.Sprintf("%s:latest", job.ContainerImage)
 	}
@@ -447,6 +454,7 @@ func (job *Job) runContainer() error {
 		// reader, err := cli.ImagePull(ctx, "docker.io/library/busybox", types.ImagePullOptions{})
 		_, err2 := cli.ImagePull(ctx, imgRef, types.ImagePullOptions{})
 		if err2 != nil {
+			log.Printf("ImagePull imgRef: %s", imgRef)
 			return err2
 		}
 		// io.Copy(os.Stdout, reader)
@@ -470,6 +478,7 @@ func (job *Job) runContainer() error {
 
 	resp, err := cli.ContainerCreate(ctx, &cfg, nil, nil, "")
 	if err != nil {
+		log.Printf("ContainerCreate cfg: %v", cfg)
 		return err
 	}
 

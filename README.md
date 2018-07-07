@@ -128,6 +128,15 @@ Returned statuses can be:
 | `failed`        | Job has failed                       |
 | `success`       | Job has succeeded                    |
 
+### Creating content to inject into the container for execution
+
+```
+cd yourcontent/
+tar zcvf ../yourcontent.tar.gz .
+base64 -w 0 < ../yourcontent.tar.g
+```
+Copy & Paste the resulting base64 into the `content: "..."` field in the job json
+
 ## LICENSE - GPLv3
 
 ```
