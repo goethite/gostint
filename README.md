@@ -1,7 +1,7 @@
 # goswim - A Shallow RESTful api for Ansible, Terraform ...
-... and basically anything you would like to run as jobs in docker containered
-environments, authenticated with Hashicorp Vault AppRoles with secret
-injection, and driven by a REST API.
+... and basically anything you would like to run as jobs in docker containers,
+authenticated with Hashicorp Vault AppRoles with Secret
+Injection, and driven by a REST API.
 
 Goal is to be a Highly Available and Scaleable API for automation.
 
@@ -143,6 +143,12 @@ tar zcvf ../yourcontent.tar.gz .
 base64 -w 0 < ../yourcontent.tar.g
 ```
 Copy & Paste the resulting base64 into the `content: "..."` field in the job json
+
+### Reading secrets.yml into a shell script
+
+You can run any script in the job container using the
+[yamlsh](https://github.com/gbevan/yamlsh) tool to parse the secrets.yml
+file into your script at runtime.
 
 ## LICENSE - GPLv3
 
