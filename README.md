@@ -150,6 +150,11 @@ You can run any script in the job container using the
 [yamlsh](https://github.com/gbevan/yamlsh) tool to parse the secrets.yml
 file into your script at runtime.
 
+```
+#!/usr/local/bin/yamlsh --yaml=/secrets.yml
+...
+```
+
 ## LICENSE - GPLv3
 
 ```
