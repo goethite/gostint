@@ -143,7 +143,16 @@ func postJob(w http.ResponseWriter, req *http.Request) {
 	newID := bson.NewObjectId()
 	jobRequest := job
 	jobRequest.ID = newID
-	jobRequest.SecretID = req.Header["X-Secret-Token"][0]
+
+	// if there isnt another SecretID in the job, then inject the one from the
+	// initial request.  This could allow support for two levels of authentication
+	// 1) the POSTer of the request, and 2) the originator of the job itself.
+	// e.g. the original job request may have been created by some orchestration
+	// tool and then passed to an intermediary, like a Lambda function, which then
+	// POSTs the reques to goswim.
+	if jobRequest.SecretID == "" {
+		jobRequest.SecretID = req.Header["X-Secret-Token"][0]
+	}
 	err := coll.Insert(jobRequest)
 	if err != nil {
 		panic(err)
