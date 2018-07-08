@@ -65,3 +65,41 @@
 
   [ "$output" != "" ]
 }
+
+@test "Should delete the job id" {
+  SECRETID="$(cat $BATS_TMPDIR/secretid)"
+  J="$(cat $BATS_TMPDIR/job1.json)"
+
+  ID=$(echo $J | jq ._id -r)
+  echo "ID:$ID" >&2
+
+  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID -X DELETE --header "X-Secret-Token: $SECRETID")"
+  echo "R:$R" >&2
+
+  DELID=$(echo "$R" | jq ._id -r)
+
+  [ "$DELID" == "$ID" ]
+}
+
+@test "Lookup for deleted id should return Not Found error" {
+  SECRETID="$(cat $BATS_TMPDIR/secretid)"
+  J="$(cat $BATS_TMPDIR/job1.json)"
+
+  ID=$(echo $J | jq ._id -r)
+  echo "ID:$ID" >&2
+
+  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
+  echo "R:$R" >&2
+
+  echo "$R" | grep "Not Found"
+}
+
+@test "Lookup for garbage id should return Invalid job ID error" {
+  SECRETID="$(cat $BATS_TMPDIR/secretid)"
+  J="$(cat $BATS_TMPDIR/job1.json)"
+
+  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/DOESNOTEXIST --header "X-Secret-Token: $SECRETID")"
+  echo "R:$R" >&2
+
+  echo "$R" | grep "Invalid job ID"
+}

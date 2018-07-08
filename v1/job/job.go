@@ -33,6 +33,8 @@ import (
 	"github.com/go-chi/render"
 )
 
+const notfound = "not found"
+
 type JobRouter struct {
 	Db *mgo.Database
 }
@@ -56,9 +58,10 @@ func Routes(db *mgo.Database) *chi.Mux {
 		Db: db,
 	}
 	router := chi.NewRouter()
-	router.Get("/{jobID}", getJob)
 	router.Post("/", postJob)
 	router.Post("/kill/{jobID}", killJob)
+	router.Get("/{jobID}", getJob)
+	router.Delete("/{jobID}", deleteJob)
 	return router
 }
 
@@ -85,6 +88,24 @@ func ErrInvalidRequest(err error) render.Renderer {
 	}
 }
 
+func ErrNotFound(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 404,
+		StatusText:     "Not Found.",
+		ErrorText:      err.Error(),
+	}
+}
+
+func ErrInternalError(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 500,
+		StatusText:     "Internal Error.",
+		ErrorText:      err.Error(),
+	}
+}
+
 type getResponse struct {
 	ID             string    `json:"_id"`
 	Status         string    `json:"status"`
@@ -104,15 +125,19 @@ func getJob(w http.ResponseWriter, req *http.Request) {
 		render.Render(w, req, ErrInvalidRequest(errors.New("job ID missing from GET path")))
 		return
 	}
+	if !bson.IsObjectIdHex(jobID) {
+		render.Render(w, req, ErrInvalidRequest(errors.New("Invalid job ID (not ObjectIdHex)")))
+		return
+	}
 	coll := jobRouter.Db.C("queues")
 	var job JobRequest
 	err := coll.FindId(bson.ObjectIdHex(jobID)).One(&job)
 	if err != nil {
-		if err.Error() == "not found" {
-			http.Error(w, http.StatusText(404), 404)
+		if err.Error() == notfound {
+			render.Render(w, req, ErrNotFound(err))
 			return
 		}
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, req, ErrInternalError(err))
 		return
 	}
 	render.JSON(w, req, getResponse{
@@ -126,6 +151,35 @@ func getJob(w http.ResponseWriter, req *http.Request) {
 		Ended:          job.Ended,
 		Output:         job.Output,
 		ReturnCode:     job.ReturnCode,
+	})
+}
+
+type deleteResponse struct {
+	ID string `json:"_id"`
+}
+
+func deleteJob(w http.ResponseWriter, req *http.Request) {
+	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
+	if jobID == "" {
+		render.Render(w, req, ErrInvalidRequest(errors.New("job ID missing from GET path")))
+		return
+	}
+	if !bson.IsObjectIdHex(jobID) {
+		render.Render(w, req, ErrInvalidRequest(errors.New("Invalid job ID (not ObjectIdHex)")))
+		return
+	}
+	coll := jobRouter.Db.C("queues")
+	err := coll.RemoveId(bson.ObjectIdHex(jobID))
+	if err != nil {
+		if err.Error() == notfound {
+			render.Render(w, req, ErrNotFound(err))
+			return
+		}
+		render.Render(w, req, ErrInternalError(err))
+		return
+	}
+	render.JSON(w, req, deleteResponse{
+		ID: jobID,
 	})
 }
 
@@ -181,20 +235,28 @@ type killResponse struct {
 func killJob(w http.ResponseWriter, req *http.Request) {
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
 	log.Printf("killJob ID: %s", jobID)
+	if jobID == "" {
+		render.Render(w, req, ErrInvalidRequest(errors.New("job ID missing from GET path")))
+		return
+	}
+	if !bson.IsObjectIdHex(jobID) {
+		render.Render(w, req, ErrInvalidRequest(errors.New("Invalid job ID (not ObjectIdHex)")))
+		return
+	}
 	coll := jobRouter.Db.C("queues")
 	var job jobqueues.Job
 	err := coll.FindId(bson.ObjectIdHex(jobID)).One(&job)
 	if err != nil {
-		if err.Error() == "not found" {
-			http.Error(w, http.StatusText(404), 404)
+		if err.Error() == notfound {
+			render.Render(w, req, ErrNotFound(err))
 			return
 		}
-		http.Error(w, http.StatusText(500), 500)
+		render.Render(w, req, ErrInternalError(err))
 		return
 	}
 	err = job.Kill()
 	if err != nil {
-		render.Render(w, req, ErrInvalidRequest(err))
+		render.Render(w, req, ErrInternalError(err))
 		return
 	}
 

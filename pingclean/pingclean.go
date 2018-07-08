@@ -101,6 +101,13 @@ func wakeup() {
 
 	// clean up nodes
 	nodes.RemoveAll(bson.M{"_id": bson.M{"$in": ids}})
+
+	// clean up any queues with ended datetime > 6 hours ago
+	now = time.Now()
+	threshold = now.Add(time.Duration(-6) * time.Hour)
+	queues.RemoveAll(bson.M{
+		"ended": bson.M{"$lt": threshold},
+	})
 }
 
 func interval() {
