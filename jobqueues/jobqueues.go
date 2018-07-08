@@ -45,6 +45,9 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+const goswimUID = 2001
+const goswimGID = 2001
+
 var debug = Debug("jobqueues")
 
 type PulledImage struct {
@@ -266,38 +269,19 @@ func (job *Job) runRequest() {
 	}
 	yamlHdr := []byte("---\n# goswim vault secrets injected:\n")
 	secretsYaml = append(yamlHdr, secretsYaml...)
-	var buf bytes.Buffer
-	wtr := tar.NewWriter(&buf)
-	hdr := &tar.Header{
-		Name: "secrets.yml",
-		Mode: 0444,
-		Size: int64(len(secretsYaml)),
+
+	entries := []TarEntry{
+		{Name: "secrets.yml", Content: secretsYaml},
 	}
-	if err = wtr.WriteHeader(hdr); err != nil {
+	job.secretsRdr, err = createTar(&entries)
+	if err != nil {
 		job.updateQueue(bson.M{
 			"status": "failed",
 			"ended":  time.Now(),
-			"output": fmt.Sprintf("Failed to write secrets.yaml to tar header for container injection: %s", err),
+			"output": err.Error(),
 		})
 		return
 	}
-	if _, err = wtr.Write(secretsYaml); err != nil {
-		job.updateQueue(bson.M{
-			"status": "failed",
-			"ended":  time.Now(),
-			"output": fmt.Sprintf("Failed to write secrets.yaml data to tar for container injection: %s", err),
-		})
-		return
-	}
-	if err = wtr.Close(); err != nil {
-		job.updateQueue(bson.M{
-			"status": "failed",
-			"ended":  time.Now(),
-			"output": fmt.Sprintf("Failed to close tar of secrets.yaml for container injection: %s", err),
-		})
-		return
-	}
-	job.secretsRdr = strings.NewReader(buf.String())
 
 	// Handle Content
 	if job.Content != "" {
@@ -472,9 +456,9 @@ func (job *Job) runContainer() error {
 	cfg := container.Config{
 		Image: job.ContainerImage,
 		// Cmd:   []string{"echo", "hello world"},
-		Cmd: job.Run,
-		Tty: true,
-		// User: "1000:1000",
+		Cmd:  job.Run,
+		Tty:  true,
+		User: fmt.Sprintf("%d:%d", goswimUID, goswimGID),
 	}
 
 	if len(job.EntryPoint) != 0 {
@@ -519,6 +503,11 @@ func (job *Job) runContainer() error {
 
 	// Copy secrets into container prior to start it
 	err = cli.CopyToContainer(ctx, resp.ID, "/", secretsRdr, opts)
+	if err != nil {
+		return err
+	}
+
+	err = addUser(cli, ctx, resp.ID, "goswim", goswimUID, goswimGID, "/tmp")
 	if err != nil {
 		return err
 	}
@@ -570,6 +559,91 @@ func (job *Job) runContainer() error {
 	// }
 
 	return nil
+}
+
+func addUser(cli *client.Client, ctx context.Context, containerID, name string, uid, gid int, home string) error {
+	// Get /etc/passwd
+	rdr, stat, err := cli.CopyFromContainer(ctx, containerID, "/etc/passwd")
+	if err != nil {
+		return err
+	}
+	log.Printf("rdr: %v", rdr)
+	log.Printf("stat: %v", stat)
+
+	defer func() {
+		rdr.Close()
+	}()
+
+	tr := tar.NewReader(rdr)
+	var bufMeta bytes.Buffer
+	for {
+		hdr, err2 := tr.Next()
+		if err2 == io.EOF {
+			break // End of archive
+		}
+		if err2 != nil {
+			return fmt.Errorf("Failed /etc/passwd extraction tar: %s", err2)
+		}
+		if hdr.Name == "passwd" {
+			if _, err = io.Copy(&bufMeta, tr); err != nil {
+				return fmt.Errorf("Failed extracting /etc/passwd from container's tar: %s", err)
+			}
+		}
+	}
+	// log.Printf("bufMeta: %v", bufMeta.String())
+	passwd := bufMeta.String()
+
+	// add goswim user
+	passwd = fmt.Sprintf("%s%s:x:%d:%d:%s:%s:/bin/sh\n", passwd, name, uid, gid, name, home)
+	log.Printf("passwd: %s", passwd)
+
+	entries := []TarEntry{
+		{Name: "passwd", Content: bytes.NewBufferString(passwd).Bytes()},
+	}
+	tarRdr, err := createTar(&entries)
+	if err != nil {
+		return err
+	}
+
+	opts := types.CopyToContainerOptions{
+		AllowOverwriteDirWithFile: true,
+		// CopyUIDGID:                true,
+	}
+	err = cli.CopyToContainer(ctx, containerID, "/etc", tarRdr, opts)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type TarEntry struct {
+	Name    string
+	Content []byte
+}
+
+func createTar(entries *[]TarEntry) (rdrClose io.Reader, err error) {
+	var buf bytes.Buffer
+	wtr := tar.NewWriter(&buf)
+
+	for _, entry := range *entries {
+		hdr := &tar.Header{
+			Name: entry.Name,
+			Mode: 0444,
+			Size: int64(len(entry.Content)),
+		}
+		if err = wtr.WriteHeader(hdr); err != nil {
+			return nil, fmt.Errorf("Failed to write %s to tar header for container injection: %s", entry.Name, err)
+		}
+		if _, err = wtr.Write(entry.Content); err != nil {
+			return nil, fmt.Errorf("Failed to write %s data to tar for container injection: %s", entry.Name, err)
+		}
+	}
+
+	if err = wtr.Close(); err != nil {
+		return nil, fmt.Errorf("Failed to close tar of for container injection: %s", err)
+	}
+	return strings.NewReader(buf.String()), nil
 }
 
 func (job *Job) Kill() error {

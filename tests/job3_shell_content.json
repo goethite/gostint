@@ -1,7 +1,7 @@
 {
   "qname": "play",
   "container_image": "busybox",
-  "content": "targz,H4sIAIKlQFsAA+3VQU+DMBgGYM79Fd/mzQRoCwxj4sGYqAfjwWg8GsAKJIUulI3t3wvJZoxG54WZZe9zaYE2bXj7gec7o+O9OIqGVsQR/9xuOSIIRBzKQISivx8HMnQoGn9rjrOwbdIQOala/jpu1/MD5fm5sV1ZjXkM/pi/5ELKkPfjBJ9Jifz34SP/QmltPFuMsMau/KWQX/KXMood4iPs5Zsjz/9k4qdl7duC3BW7u7y/ubjynh6v3TPGVFYYmt4O54KeTaNfJ1Om6iWbW3LVm2ZM9x1N/qaTPNDmLJFvVdao1p6yLGk/rrx11U+al3VObkYBdV3n5cbkWnmZqdh/v4njtK3/IZyx1hhqfBaGP3//A7H5/4uYR7O+/kXQN6j/PchM3SZlrZqXskpydU7pwq5Ts0I5AgAAAAAAAAAAAAAAAAAclnfkWD1rACgAAA==",
+  "content": "targz,H4sIAB8lQlsAA+3VTU+DMBgH8J77KZ5tNw2UvgDGxIMxUQ/Gg9F4NMAqkABdKIzt2wvJthiNzgsz0+d3aXlLG/7PAy4jo/N6oe8PIw997/24RbiUPFRCcsX786EUioA//tYIaW0T1QAk1stv79t3/Ui5LDW2y8sxy+CH+QtPCaGkIh73AhFi/oewyz/TRWFcm42wxr78hfqYvxCBT8AbYS+f/PP8ZxMW5xWzGTgrend5f3Nx5T49XjtnlOokMzC9HeoCnk1dzCdTqqslXVhw9GtBadFPCmCbSfQAm1oCZnVS68ae0CRqdkfuuuwfmi3yKgUnAQld17mpMWmh3cSUAJXWcwu1MQ2z7dyw9tTS334/f922/4dwxlpj6PFAqa+//5Jv/v889Pyg738u+wH7/wASUzVRXun6JS+jVJ9D3Np1bFbYeAghhBBCCCGEEEIIIYQQQgghdFzeALlUEMkAKAAA",
   "run": [
     "/goswim/hello.sh"
   ],

@@ -3,7 +3,7 @@
   "container_image": "busybox",
   "content": "",
   "run": [
-    "env"
+    "sh", "-c", "ls -la /etc/passwd; cat /etc/passwd; ps -efl"
   ],
   "secret_refs": [
     "mysecret@secret/data/my-secret.my-value",
