@@ -54,7 +54,7 @@ curl -s \
   --request POST \
   --header 'X-Vault-Token: root' \
   --data '{"policy": "path \"secret/*\" {\n  capabilities = [\"read\"]\n}"}' \
-  ${VAULT_ADDR}/v1/sys/policy/goswim-approle
+  ${VAULT_ADDR}/v1/sys/policy/goswim-approle-kv
 
 # Create named role for goswim
 echo '=== Create approle role for goswim ======================'
@@ -64,7 +64,7 @@ vault write auth/approle/role/goswim-role \
   token_num_uses=10 \
   token_ttl=20m \
   token_max_ttl=30m \
-  policies="goswim-approle"
+  policies="goswim-approle-kv"
 
 # Get RoleID for goswim
 export GOSWIM_ROLEID=`vault read -format=yaml -field=data auth/approle/role/goswim-role/role-id | awk '{print $2;}'`
