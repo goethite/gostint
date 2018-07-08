@@ -665,18 +665,15 @@ func (job *Job) Kill() error {
 	})
 
 	go func() {
-		timeout := time.Duration(30) * time.Second
+		timeout := time.Duration(15) * time.Second
 
-		// log.Printf("Trying to stop container %s", job.ContainerID)
 		err = cli.ContainerStop(ctx, job.ContainerID, &timeout)
 		if err != nil {
 			log.Printf("Stop container %s request failed: %s", job.ContainerID, err)
 		}
 
-		// log.Printf("Trying to kill container %s", job.ContainerID)
 		err = cli.ContainerKill(ctx, job.ContainerID, "KILL")
 		if err != nil {
-			// log.Printf("**** error: %s", err.Error())
 			if !strings.HasSuffix(err.Error(), "is not running") {
 				log.Printf("Kill container %s request failed: %s", job.ContainerID, err)
 			}
