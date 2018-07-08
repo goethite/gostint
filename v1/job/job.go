@@ -169,6 +169,9 @@ func deleteJob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	coll := jobRouter.Db.C("queues")
+
+	// TODO: Get status and ensure job is not running/stopping
+
 	err := coll.RemoveId(bson.ObjectIdHex(jobID))
 	if err != nil {
 		if err.Error() == notfound {

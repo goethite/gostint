@@ -106,7 +106,6 @@ For some example job JSON files see [tests/](tests/)
 ### Retrieve Status and Results of a job using curl
 ```
 $ curl -k -s https://127.0.0.1:3232/v1/api/job/5b3f83d3559214025a198281 \
-  -X GET \
   --header 'X-Secret-Token: 21797b7e-589b-af25-a0e3-341974e5992b' \
   | jq
 {
@@ -134,6 +133,36 @@ Returned statuses can be:
 | `stopping`      | Job is currently stopping for a kill req |
 | `failed`        | Job has failed                           |
 | `success`       | Job has succeeded                        |
+
+### Killing a job by jobID
+```
+curl -k -s https://127.0.0.1:3232/v1/api/job/kill/5b4246f1e1c2cc22c776d734 \
+  --header 'X-Secret-Token: 8447c783-51c3-3d82-8415-0df657d70dc8' \
+  -X POST \
+  | jq
+{
+  "_id": "5b4246f1e1c2cc22c776d734",
+  "container_id": "fee2da7bb3f95b09bb713b4d8520044c7eaff5a98a516ead66924cd74a62e3f7",
+  "status": "stopping"
+}
+
+goswim will attempt to first stop the container and will timeout after 15
+seconds and then will kill it.
+```
+
+### Deleting a job
+```
+curl -k -s https://127.0.0.1:3232/v1/api/job/5b4258fee1c2cc29d1c687d1 \
+  --header 'X-Secret-Token: 8447c783-51c3-3d82-8415-0df657d70dc8' \
+  -X DELETE \
+  | jq
+{
+  "_id": "5b4258fee1c2cc29d1c687d1"
+}
+
+```
+WARNING: currently this can delete a running/stopping job - this will be fixed
+soon...
 
 ### Creating content to inject into the container for execution
 
