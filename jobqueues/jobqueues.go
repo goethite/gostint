@@ -72,6 +72,7 @@ type Job struct {
 	Content        string        `json:"content"         bson:"content"`
 	EntryPoint     []string      `json:"entrypoint"      bson:"entrypoint"`
 	Run            []string      `json:"run"             bson:"run"`
+	WorkingDir     string        `json:"working_directory" bson:"working_directory"`
 	Status         string        `json:"status"          bson:"status"`
 	ReturnCode     int           `json:"return_code"     bson:"return_code"`
 	Submitted      time.Time     `json:"submitted"       bson:"submitted"`
@@ -465,6 +466,10 @@ func (job *Job) runContainer() error {
 		cfg.Entrypoint = job.EntryPoint
 	}
 
+	if job.WorkingDir != "" {
+		cfg.WorkingDir = job.WorkingDir
+	}
+
 	resp, err := cli.ContainerCreate(ctx, &cfg, nil, nil, "")
 	if err != nil {
 		log.Printf("ContainerCreate cfg: %v", cfg)
@@ -563,12 +568,10 @@ func (job *Job) runContainer() error {
 
 func addUser(cli *client.Client, ctx context.Context, containerID, name string, uid, gid int, home string) error {
 	// Get /etc/passwd
-	rdr, stat, err := cli.CopyFromContainer(ctx, containerID, "/etc/passwd")
+	rdr, _, err := cli.CopyFromContainer(ctx, containerID, "/etc/passwd")
 	if err != nil {
 		return err
 	}
-	log.Printf("rdr: %v", rdr)
-	log.Printf("stat: %v", stat)
 
 	defer func() {
 		rdr.Close()
@@ -595,7 +598,6 @@ func addUser(cli *client.Client, ctx context.Context, containerID, name string, 
 
 	// add goswim user
 	passwd = fmt.Sprintf("%s%s:x:%d:%d:%s:%s:/bin/sh\n", passwd, name, uid, gid, name, home)
-	log.Printf("passwd: %s", passwd)
 
 	entries := []TarEntry{
 		{Name: "passwd", Content: bytes.NewBufferString(passwd).Bytes()},
@@ -662,12 +664,24 @@ func (job *Job) Kill() error {
 		"status": "stopping",
 	})
 
-	timeout := time.Duration(1) * time.Second
+	go func() {
+		timeout := time.Duration(30) * time.Second
 
-	err = cli.ContainerStop(ctx, job.ContainerID, &timeout)
-	if err != nil {
-		return err
-	}
+		// log.Printf("Trying to stop container %s", job.ContainerID)
+		err = cli.ContainerStop(ctx, job.ContainerID, &timeout)
+		if err != nil {
+			log.Printf("Stop container %s request failed: %s", job.ContainerID, err)
+		}
+
+		// log.Printf("Trying to kill container %s", job.ContainerID)
+		err = cli.ContainerKill(ctx, job.ContainerID, "KILL")
+		if err != nil {
+			// log.Printf("**** error: %s", err.Error())
+			if !strings.HasSuffix(err.Error(), "is not running") {
+				log.Printf("Kill container %s request failed: %s", job.ContainerID, err)
+			}
+		}
+	}()
 
 	return nil
 }

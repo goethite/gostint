@@ -80,7 +80,7 @@
   status="stopping"
   for i in {1..20}
   do
-    sleep 1
+    sleep 5
     R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
     echo "R:$R" >&2
     status=$(echo $R | jq .status -r)

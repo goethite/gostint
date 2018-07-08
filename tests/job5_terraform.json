@@ -1,0 +1,17 @@
+{
+  "qname": "play",
+  "content": "targz,H4sIAMNIQlsAA+3XQW+CMBQH8J79FJXsDG0pNDHZfd9gR1OxIEmhphSXxfjd1+owLtniDsLm9n4XkJK0yfP/WuIEjY54IsvCNRWMXl4HiKYpIzxNUx7ey/1PhLPxl4ZQ3zlpMZ5iqt8oTirTvdTNmH+D79efZYQS/1xwlkP9p3Cuv+ndtndd7MqbzxEKnHP+df0z/l5/zpnIEaE0YwxhcvOVfOKf1/9UdhxVVikX4f0M453UvcKPOHrY76SNjyOHaHaY/fRawe2d89/Iuh0j/Oh6/ikTQ/8XgjCffyKogPxPwarO9LZQONKmkHpZ1lpFOCqNOTUDjAvTOtW6cBuagh+ZR8eB8Gorm2OrSFyzTfxQvJIWWsUdOefft/parrQa4QRwdf/PL85/mQj7v+AE8j+FoewfTgBrVcpeuxDsJ6W1wc/G6vUcgv33DPmPXxs91hzXz//pkP+chu8/SmhGIf9TCLu7P/kpu6wbWakF3shuUxfGbhOnrJWlsc1C19XGQfQBAAAAAAAAAAAAAADgnrwBTPrfDQAoAAA=",
+  "entrypoint": [
+    "sh", "-c"
+  ],
+  "run": [
+    "terraform init && terraform plan && terraform apply -auto-approve"
+  ],
+  "working_directory": "/goswim",
+  "secret_refs": [
+    "mysecret@secret/data/my-secret.my-value",
+    "field_1@secret/data/my-form.field1",
+    "field_2@secret/data/my-form.field2",
+    "field_3@secret/data/my-form.field3"
+  ]
+}
