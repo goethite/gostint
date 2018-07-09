@@ -170,9 +170,25 @@ func deleteJob(w http.ResponseWriter, req *http.Request) {
 	}
 	coll := jobRouter.Db.C("queues")
 
-	// TODO: Get status and ensure job is not running/stopping
+	// Get status and ensure job is not running/stopping
+	// TODO: Look at making the find and remove atomic
+	var job jobqueues.Job
+	err := coll.FindId(bson.ObjectIdHex(jobID)).One(&job)
+	if err != nil {
+		if err.Error() == notfound {
+			render.Render(w, req, ErrNotFound(err))
+			return
+		}
+		render.Render(w, req, ErrInternalError(err))
+		return
+	}
 
-	err := coll.RemoveId(bson.ObjectIdHex(jobID))
+	if job.Status == "running" || job.Status == "stopping" {
+		render.Render(w, req, ErrInvalidRequest(errors.New("Cannot delete a running/stopping job")))
+		return
+	}
+
+	err = coll.RemoveId(bson.ObjectIdHex(jobID))
 	if err != nil {
 		if err.Error() == notfound {
 			render.Render(w, req, ErrNotFound(err))
