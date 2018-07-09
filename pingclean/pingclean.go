@@ -71,7 +71,7 @@ func wakeup() {
 	//   status=unknown
 	var ns []Node
 	now := time.Now()
-	threshold := now.Add(time.Duration(-1) * time.Minute)
+	threshold := now.Add(time.Duration(-5) * time.Minute)
 	err = nodes.Find(bson.M{
 		"last_seen": bson.M{"$lt": threshold},
 	}).All(&ns)
