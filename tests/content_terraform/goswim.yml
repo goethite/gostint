@@ -1,1 +1,2 @@
-container_image: hashicorp/terraform:light
+#container_image: hashicorp/terraform:light
+container_image: hashicorp/terraform:0.11.7
