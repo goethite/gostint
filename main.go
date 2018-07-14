@@ -170,10 +170,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	log.Println("Dialing Mongodb")
 	dbSession, err = mgo.Dial(os.Getenv("GOSWIM_DBURL"))
 	if err != nil {
 		panic(err)
 	}
+	log.Println("Logging in to goswim db")
 	goswimDb = dbSession.DB("goswim")
 	err = goswimDb.Login(username, password)
 	if err != nil {
@@ -195,5 +197,11 @@ func main() {
 	// log.Fatal(http.ListenAndServe(":3232", router))
 
 	// TODO: parameterise cert & key from command line
-	log.Fatal(http.ListenAndServeTLS(":3232", "etc/cert.pem", "etc/key.pem", router))
+	// log.Fatal(http.ListenAndServeTLS(":3232", "etc/cert.pem", "etc/key.pem", router))
+	log.Fatal(http.ListenAndServeTLS(
+		":3232",
+		os.Getenv("GOSWIM_SSL_CERT"),
+		os.Getenv("GOSWIM_SSL_KEY"),
+		router,
+	))
 }

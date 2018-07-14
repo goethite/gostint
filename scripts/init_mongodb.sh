@@ -6,7 +6,7 @@ echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongod
 apt update
 apt-get install -y mongodb-org
 
-mongod --config /etc/mongod.conf --fork --smallfiles --auth
+mongod --config /etc/mongod.conf --fork --smallfiles --auth --bind_ip 0.0.0.0
 
 # Wait for MongoDB to become available and config goswim root/admin user
 (
