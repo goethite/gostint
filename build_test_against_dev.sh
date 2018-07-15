@@ -21,7 +21,11 @@ token=$(curl -s \
 roleid=`curl -s --header 'X-Vault-Token: root' \
   ${VAULT_ADDR}/v1/auth/approle/role/goswim-role/role-id | jq .data.role_id -r`
 
-docker run --name goswim -p 3333:3232 \
+docker stop goswim || /bin/true
+docker rm goswim || /bin/true
+
+docker run --init -t \
+  --name goswim -p 3333:3232 \
   --privileged=true \
   -v $(pwd)/etc:/var/lib/goswim \
   -e VAULT_ADDR="$VAULT_ADDR" \

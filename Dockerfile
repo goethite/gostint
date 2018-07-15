@@ -33,6 +33,7 @@ RUN \
   dep ensure -v --vendor-only && \
   CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o goswim .
 
+
 ##############################################
 # Exe stage
 FROM alpine
@@ -45,11 +46,11 @@ ADD start-image.sh .
 RUN \
   apk add --no-cache docker jq curl openssl sudo && \
   adduser -S -D -H -G docker -h /app goswim && \
-  mkdir -p /var/lib/docker && \
-  chown goswim:docker /var/lib/docker && \
   mkdir -p /var/lib/goswim && \
   chown goswim /var/lib/goswim && \
   echo "goswim	ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+# sudo priv is removed immediately after dockerd starts, see start-image.sh
 
 USER goswim
 ENTRYPOINT ["/app/start-image.sh"]
