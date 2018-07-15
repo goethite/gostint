@@ -1,7 +1,5 @@
 # goswim - A Shallow RESTful api for Ansible, Terraform ...
-... and basically anything you would like to run as jobs in docker containers,
-authenticated with Hashicorp Vault AppRoles with Secret
-Injection.
+... and basically anything you would like to run as jobs in docker containers, authenticated with Hashicorp Vault AppRoles with Secret Injection.
 
 Goal is to be a Highly Available and Scaleable API for automation.
 
@@ -9,9 +7,7 @@ See [Concept Ideas](docs/Concept_Ideas.md)
 
 At this stage this project is a proof-of-concept and under development...
 
-See [build_test_dev script](./build_test_against_dev.sh) for example starting
-the goswim docker container with the instances of Vault and MongoDb running
-in the vagrant container.
+See [build_test_dev script](./build_test_against_dev.sh) for example starting the goswim docker container with the instances of Vault and MongoDb running in the vagrant container.
 
 [Dev Notes](docs/devnotes.nd)
 
