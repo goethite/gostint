@@ -10,20 +10,27 @@ docker build -t goswim .
 # port mapping in Vagrantfile
 export VAULT_ADDR="${VAULT_ADDR:-http://172.17.0.1:8300}"
 
-vault login root
+# login to the vault
+# vault login root
 
+# Request a MongoDB secret engine token for goswim to request an ephemeral
+# time-bound username/password pair.
 token=$(curl -s \
   --request POST \
   --header 'X-Vault-Token: root' \
   --data '{"policies": ["goswim-mongodb-auth"], "ttl": "10m", "num_uses": 2}' \
   ${VAULT_ADDR}/v1/auth/token/create | jq .auth.client_token -r)
 
+# Get goswim's AppRole RoleId from the Vault
 roleid=`curl -s --header 'X-Vault-Token: root' \
   ${VAULT_ADDR}/v1/auth/approle/role/goswim-role/role-id | jq .data.role_id -r`
 
+# Cleanup any previous runs in Dev
 docker stop goswim || /bin/true
 docker rm goswim || /bin/true
 
+# Run goswim in foreground to allow monitoring of the log output in the
+# terminal.
 docker run --init -t \
   --name goswim -p 3333:3232 \
   --privileged=true \

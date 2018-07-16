@@ -11,6 +11,47 @@ See [build_test_dev script](./build_test_against_dev.sh) for example starting th
 
 [Dev Notes](docs/devnotes.nd)
 
+## Usage
+
+### Prerequisites
+1. A MongoDB service
+
+2. A Hashicorp Vault service
+See test setup in [scripts/init_vault.sh](scripts/init_vault.sh) for example of enabling the MongoDB Secret Engine in Vault.
+
+3. SSL Key and Certificate for goswim - `key.pem` and `cert.pem` stored in persistent volume shown below as `/srv/goswim-1/etc`
+
+### Usage
+```bash
+# point to your vault's url
+VAULT_ADDR="${VAULT_ADDR:-https://your.vault.host:8200}"
+
+# login to the vault - using your chosen authentication scheme in vault
+vault login # to get a <token>
+
+# Request a MongoDB secret engine token for goswim to request an ephemeral
+# time-bound username/password pair.
+token=$(curl -s \
+  --request POST \
+  --header 'X-Vault-Token: <token>' \
+  --data '{"policies": ["goswim-mongodb-auth"], "ttl": "10m", "num_uses": 2}' \
+  ${VAULT_ADDR}/v1/auth/token/create | jq .auth.client_token -r)
+
+# Get goswim's AppRole RoleId from the Vault
+roleid=`curl -s --header 'X-Vault-Token: root' \
+  ${VAULT_ADDR}/v1/auth/approle/role/goswim-role/role-id | jq .data.role_id -r`
+
+# Run goswim
+docker run --init -d \
+  --name goswim -p 3232:3232 \
+  --privileged=true \
+  -v /srv/goswim-1/etc:/var/lib/goswim \
+  -e VAULT_ADDR="$VAULT_ADDR" \
+  -e GOSWIM_DBAUTH_TOKEN="$token" \
+  -e GOSWIM_ROLEID="$roleid" \
+  -e GOSWIM_DBURL=your-db-host:27017
+  goswim
+```
 
 ## LICENSE - GPLv3
 

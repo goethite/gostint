@@ -21,14 +21,13 @@
 FROM golang:latest as builder
 WORKDIR /go/src/github.com/gbevan/goswim
 
-ADD main.go Gopkg* ./
-ADD v1 ./v1/
-ADD approle ./approle/
-ADD pingclean ./pingclean/
-ADD jobqueues ./jobqueues/
+COPY main.go Gopkg* ./
+COPY v1 ./v1/
+COPY approle ./approle/
+COPY pingclean ./pingclean/
+COPY jobqueues ./jobqueues/
 
 RUN \
-  ls -laR && \
   go get github.com/golang/dep/cmd/dep && \
   dep ensure -v --vendor-only && \
   CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o goswim .
@@ -41,10 +40,11 @@ FROM alpine
 COPY --from=builder /go/src/github.com/gbevan/goswim/goswim /usr/bin
 
 WORKDIR /app
-ADD start-image.sh .
+COPY start-image.sh .
 
+# apk add --no-cache docker jq curl openssl sudo && \
 RUN \
-  apk add --no-cache docker jq curl openssl sudo && \
+  apk add --no-cache docker sudo && \
   adduser -S -D -H -G docker -h /app goswim && \
   mkdir -p /var/lib/goswim && \
   chown goswim /var/lib/goswim && \
