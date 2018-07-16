@@ -23,6 +23,9 @@ vault login root
 echo '=== Enable MongoDB secret engine ========================='
 vault secrets enable database
 
+# Configure Vault's MongoDB Secret Engine for our DB instance
+# this requires privileged creds for the DB to allow Vault to issue ephemeral
+# creds to goswim.  It is recommended to rotate your privileged creds in production.
 vault write database/config/goswim-mongodb \
   plugin_name=mongodb-database-plugin \
   allowed_roles="goswim-dbauth-role" \
