@@ -35,7 +35,7 @@ See test setup in [scripts/init_vault.sh](scripts/init_vault.sh) for example of 
 
 3. SSL Key and Certificate for goswim - `key.pem` and `cert.pem` stored in persistent volume shown below as `/srv/goswim-1/etc`
 
-### Usage
+### Running the goswim docker container
 A very basic setup for a single instance of goswim:
 ```bash
 # point to your vault's url
@@ -65,7 +65,7 @@ docker run --init -d \
   -e GOSWIM_DBAUTH_TOKEN="$token" \
   -e GOSWIM_ROLEID="$roleid" \
   -e GOSWIM_DBURL=your-db-host:27017
-  goswim
+  goethite/goswim
 ```
 
 ### TODO: Going HA and Scalable with goswim
