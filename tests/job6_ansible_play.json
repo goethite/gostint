@@ -1,0 +1,15 @@
+{
+  "qname": "another_q",
+  "content": "targz,H4sIAOCoT1sAA+3W3W6CMBgGYI69isZzgba0bCRei6nYOWYBQ2GLd792smlMjDEB9vc+HABtQiFvv5YwCkYXO6kQ/sxTRs/PnwLKOeMpZYJK1y4plwER479aEHS2VQ0hUwz1E4VRW+5HngN35c99u0w5R/5TOOa/N+qwruvdOBPhnvyldPVPYyET5D+Fi/z9BQ0PpRlyDB+wTJKr+VPJ+/xZwrnPn7m7gMRDvsQ1/zz/BXmubWszooyZEdIqu7OZuyBkQYoqN91Gr15V07d5T4XRGYmszhvdWj9XvroqVbqubW3finLWP2Sj1902I+4Zy77juz8ZzlzU/8dkGHqMW/UfJ/y0/0vm6t+tCCnqfwqUpWHsDkpUZYu10au8riqdt0VdLU2dK4N6/cvC6LgqD73nn7tZ/4Kd6j9O/f+f/yVA/U/AVXuriko3q6JUW7d7z19KZR4fon45yMuMhSIUcywDAAAAAAAAAAAAAAC/xjs/0eiwACgAAA==",
+  "run": [
+    "-i",
+    "hosts",
+    "play1.yml"
+  ],
+  "secret_refs": [
+    "mysecret@secret/data/my-secret.my-value",
+    "field_1@secret/data/my-form.field1",
+    "field_2@secret/data/my-form.field2",
+    "field_3@secret/data/my-form.field3"
+  ]
+}

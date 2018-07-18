@@ -6,12 +6,14 @@
   echo "$SECRETID" > $BATS_TMPDIR/secretid
 
   J="$(curl -k -s https://127.0.0.1:3232/v1/api/job --header "X-Secret-Token: $SECRETID" -X POST -d @../job4_sleep.json | tee $BATS_TMPDIR/job4.json)"
+  echo "J=$J" >&2
   [ "$J" != "" ]
 }
 
 @test "job4 should be queued in the play queue" {
 
   J="$(cat $BATS_TMPDIR/job4.json)"
+  echo "J=$J" >&2
 
   id=$(echo $J | jq ._id -r)
   status=$(echo $J | jq .status -r)
@@ -47,9 +49,16 @@
     R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
     echo "R:$R" >&2
     status=$(echo $R | jq .status -r)
+    container_id=$(echo $R | jq .container_id -r)
     if [ "$status" != "queued" ]
     then
-      break
+      if [ "$status" != "running" ]
+      then
+        break
+      elif [ "$container_id" != "" ]
+      then
+        break
+      fi
     fi
   done
   echo "status after:$status" >&2

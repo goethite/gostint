@@ -1,0 +1,7 @@
+- hosts: all
+  tasks:
+    - include_vars:
+        file: /secrets.yml
+        name: goswim
+
+    - debug: var=goswim
