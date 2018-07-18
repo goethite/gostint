@@ -26,6 +26,9 @@ changelog:
     - '^docs:'
     - '^test:'
 release:
+  github:
+    owner: goethite
+    name: goswim
   draft: false
   prerelease: true
   disable: false

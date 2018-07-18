@@ -484,6 +484,8 @@ func (job *Job) runContainer() error {
 		"container_id": resp.ID,
 	})
 
+	log.Printf("Created container ID: %s", resp.ID)
+
 	defer func() {
 		log.Printf("Removing container %s", resp.ID)
 		rmOpts := types.ContainerRemoveOptions{
@@ -648,6 +650,8 @@ func createTar(entries *[]TarEntry) (rdrClose io.Reader, err error) {
 	return strings.NewReader(buf.String()), nil
 }
 
+// TODO: KILLs must target the goswim node directly in a HA cluster - so MUST
+// be done via the queues document somehow
 func (job *Job) Kill() error {
 	if job.ContainerID == "" {
 		return errors.New("job.ContainerID is missing")
