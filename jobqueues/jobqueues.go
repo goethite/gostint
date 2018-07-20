@@ -83,6 +83,7 @@ type Job struct {
 	SecretRefs     []string      `json:"secret_refs"     bson:"secret_refs"`
 	ContOnWarnings bool          `json:"cont_on_warnings" bson:"cont_on_warnings"`
 	ContainerID    string        `json:"container_id"    bson:"container_id"`
+	KillRequested  bool          `json:"kill_requested"  bson:"kill_requested"`
 	contentRdr     io.Reader
 	secretsRdr     io.Reader
 	// ReturnCode     int           `json:"return_code"     bson:"return_code,omitempty"`
@@ -103,6 +104,8 @@ func Init(db *mgo.Database, appRoleID string, nodeUuid string) {
 	// Qname defines the FIFO queue.
 	// Provide a Wake channel for immediate pull ???
 	go requestHandler()
+
+	go killHandler()
 }
 
 func requestHandler() {
@@ -170,7 +173,38 @@ func requestHandler() {
 	}
 }
 
-func (job *Job) updateQueue(u bson.M) (*Job, error) {
+func killHandler() {
+	db := jobQueues.Db
+	c := db.C("queues")
+
+	for {
+		var queues []Job
+		err := c.Find(bson.M{
+			"node_uuid":      jobQueues.NodeUUID,
+			"kill_requested": true,
+			"status": bson.M{
+				"$nin": []string{
+					"failed",
+					"success",
+				},
+			},
+		}).All(&queues)
+		if err != nil {
+			log.Printf("killHandler Error: Find queues failed: %s\n", err)
+			continue
+		}
+
+		for _, job := range queues {
+			log.Printf("killHandler job: %v", job)
+			job.kill()
+		}
+
+		time.Sleep(1000 * time.Millisecond)
+	}
+}
+
+// UpdateJob Atomically update a job in MongoDB
+func (job *Job) UpdateJob(u bson.M) (*Job, error) {
 	db := jobQueues.Db
 	c := db.C("queues")
 
@@ -188,9 +222,19 @@ func (job *Job) updateQueue(u bson.M) (*Job, error) {
 }
 
 func (job *Job) runRequest() {
+
+	if job.KillRequested {
+		job.UpdateJob(bson.M{
+			"status": "failed",
+			"ended":  time.Now(),
+			"output": "job killed",
+		})
+		return
+	}
+
 	token, client, err := approle.Authenticate(jobQueues.AppRoleID, job.SecretID)
 	if err != nil {
-		job.updateQueue(bson.M{
+		job.UpdateJob(bson.M{
 			"status": "notauthorised",
 			"ended":  time.Now(),
 			"output": err.Error(),
@@ -215,7 +259,7 @@ func (job *Job) runRequest() {
 	// without needing to re-query the Vault.
 	secRefRe, err := regexp.Compile("^(\\w+)@([\\w\\-_/]+)\\.(([\\w\\-_]+))$")
 	if err != nil {
-		job.updateQueue(bson.M{
+		job.UpdateJob(bson.M{
 			"status": "failed",
 			"ended":  time.Now(),
 			"output": fmt.Sprintf("Regex compilation error: %s", err),
@@ -236,7 +280,7 @@ func (job *Job) runRequest() {
 		if secretValues == nil {
 			secretValues, err = client.Logical().Read(secPath)
 			if err != nil {
-				job.updateQueue(bson.M{
+				job.UpdateJob(bson.M{
 					"status": "failed",
 					"ended":  time.Now(),
 					"output": fmt.Sprintf("Failed to retrieve secret %s from vault: %s", secPath, err),
@@ -245,7 +289,7 @@ func (job *Job) runRequest() {
 			}
 
 			if !job.ContOnWarnings && len(secretValues.Warnings) > 0 {
-				job.updateQueue(bson.M{
+				job.UpdateJob(bson.M{
 					"status": "failed",
 					"ended":  time.Now(),
 					"output": fmt.Sprintf("FailOnWarnings from vault path %s lookups: %v", secPath, secretValues.Warnings),
@@ -261,7 +305,7 @@ func (job *Job) runRequest() {
 	// Create tar rdr for /secrets.yml in container
 	secretsYaml, err := yaml.Marshal(secrets)
 	if err != nil {
-		job.updateQueue(bson.M{
+		job.UpdateJob(bson.M{
 			"status": "failed",
 			"ended":  time.Now(),
 			"output": fmt.Sprintf("Failed to Marshal secrets to yaml for container injection: %s", err),
@@ -276,7 +320,7 @@ func (job *Job) runRequest() {
 	}
 	job.secretsRdr, err = createTar(&entries)
 	if err != nil {
-		job.updateQueue(bson.M{
+		job.UpdateJob(bson.M{
 			"status": "failed",
 			"ended":  time.Now(),
 			"output": err.Error(),
@@ -288,7 +332,7 @@ func (job *Job) runRequest() {
 	if job.Content != "" {
 		parts := strings.Split(job.Content, ",")
 		if len(parts) != 2 {
-			job.updateQueue(bson.M{
+			job.UpdateJob(bson.M{
 				"status": "failed",
 				"ended":  time.Now(),
 				"output": fmt.Sprintf("Failed to parse invalid content"),
@@ -298,7 +342,7 @@ func (job *Job) runRequest() {
 		// decode content base64
 		data, err2 := base64.StdEncoding.DecodeString(parts[1])
 		if err2 != nil {
-			job.updateQueue(bson.M{
+			job.UpdateJob(bson.M{
 				"status": "failed",
 				"ended":  time.Now(),
 				"output": fmt.Sprintf("Failed to decode content base64: %s", err2),
@@ -310,7 +354,7 @@ func (job *Job) runRequest() {
 			// Put content reader in job for later copy into container as tar reader
 			job.contentRdr, err = gzip.NewReader(strings.NewReader(string(data)))
 			if err != nil {
-				job.updateQueue(bson.M{
+				job.UpdateJob(bson.M{
 					"status": "failed",
 					"ended":  time.Now(),
 					"output": fmt.Sprintf("Failed to unzip content: %s", err),
@@ -319,7 +363,7 @@ func (job *Job) runRequest() {
 			}
 			break
 		default:
-			job.updateQueue(bson.M{
+			job.UpdateJob(bson.M{
 				"status": "failed",
 				"ended":  time.Now(),
 				"output": fmt.Sprintf("Failed to extract content, unsupported archive format: %s", parts[0]),
@@ -332,7 +376,7 @@ func (job *Job) runRequest() {
 		meta := Meta{}
 		tempRdr, err := gzip.NewReader(strings.NewReader(string(data)))
 		if err != nil {
-			job.updateQueue(bson.M{
+			job.UpdateJob(bson.M{
 				"status": "failed",
 				"ended":  time.Now(),
 				"output": fmt.Sprintf("Failed to unzip content to rdr for goswim.yaml: %s", err),
@@ -347,7 +391,7 @@ func (job *Job) runRequest() {
 				break // End of archive
 			}
 			if err2 != nil {
-				job.updateQueue(bson.M{
+				job.UpdateJob(bson.M{
 					"status": "failed",
 					"ended":  time.Now(),
 					"output": fmt.Sprintf("Failed content tar: %s", err2),
@@ -356,7 +400,7 @@ func (job *Job) runRequest() {
 			}
 			if hdr.Name == "./goswim.yml" {
 				if _, err = io.Copy(&bufMeta, tr); err != nil {
-					job.updateQueue(bson.M{
+					job.UpdateJob(bson.M{
 						"status": "failed",
 						"ended":  time.Now(),
 						"output": fmt.Sprintf("Failed extracting goswim.yml from tar: %s", err),
@@ -369,7 +413,7 @@ func (job *Job) runRequest() {
 			// parse goswim.yml
 			err := yaml.Unmarshal(bufMeta.Bytes(), &meta)
 			if err != nil {
-				job.updateQueue(bson.M{
+				job.UpdateJob(bson.M{
 					"status": "failed",
 					"ended":  time.Now(),
 					"output": fmt.Sprintf("Failed parsing yaml in goswim.yml: %s", err),
@@ -383,9 +427,18 @@ func (job *Job) runRequest() {
 		}
 	}
 
+	if job.KillRequested {
+		job.UpdateJob(bson.M{
+			"status": "failed",
+			"ended":  time.Now(),
+			"output": "job killed",
+		})
+		return
+	}
+
 	err = job.runContainer()
 	if err != nil {
-		job.updateQueue(bson.M{
+		job.UpdateJob(bson.M{
 			"status": "failed",
 			"ended":  time.Now(),
 			"output": fmt.Sprintf("Run container failed: %s", err),
@@ -476,11 +529,11 @@ func (job *Job) runContainer() error {
 		return err
 	}
 
-	// save contentRdr and secretsRdr as updateQueue() drops them from job
+	// save contentRdr and secretsRdr as UpdateJob() drops them from job
 	contentRdr := job.contentRdr
 	secretsRdr := job.secretsRdr
 
-	job.updateQueue(bson.M{
+	job.UpdateJob(bson.M{
 		"container_id": resp.ID,
 	})
 
@@ -549,7 +602,7 @@ func (job *Job) runContainer() error {
 		finalStatus = "failed"
 	}
 
-	job.updateQueue(bson.M{
+	job.UpdateJob(bson.M{
 		"status":      finalStatus,
 		"ended":       time.Now(),
 		"output":      buf.String(),
@@ -652,7 +705,7 @@ func createTar(entries *[]TarEntry) (rdrClose io.Reader, err error) {
 
 // TODO: KILLs must target the goswim node directly in a HA cluster - so MUST
 // be done via the queues document somehow
-func (job *Job) Kill() error {
+func (job *Job) kill() error {
 	if job.ContainerID == "" {
 		return errors.New("job.ContainerID is missing")
 	}
@@ -664,9 +717,9 @@ func (job *Job) Kill() error {
 		return err
 	}
 
-	job.updateQueue(bson.M{
-		"status": "stopping",
-	})
+	// job.UpdateJob(bson.M{
+	// 	"status": "stopping",
+	// })
 
 	go func() {
 		timeout := time.Duration(15) * time.Second
