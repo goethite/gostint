@@ -22,9 +22,12 @@ add-apt-repository \
   $(lsb_release -cs) \
   stable"
 apt update
+# apt install -y docker-ce=18.03.1~ce~3-0~ubuntu
 apt install -y docker-ce
 gpasswd -a vagrant docker
-dockerd >/tmp/docker.log 2>&1 &
+
+# Start dockerd
+dockerd -s vfs >/tmp/docker.log 2>&1 &
 
 # Install Go
 GOVER="1.10.3"

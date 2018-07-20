@@ -273,11 +273,19 @@ func killJob(w http.ResponseWriter, req *http.Request) {
 		render.Render(w, req, ErrInternalError(err))
 		return
 	}
-	err = job.Kill()
-	if err != nil {
-		render.Render(w, req, ErrInternalError(err))
-		return
-	}
+	// err = job.Kill()
+	// if err != nil {
+	// 	render.Render(w, req, ErrInternalError(err))
+	// 	return
+	// }
+
+	// flag job to be killed - we cant do this directly here because this
+	// instance of goswim may not be the same one that is running the job
+
+	job.UpdateJob(bson.M{
+		"status":         "stopping",
+		"kill_requested": true,
+	})
 
 	render.JSON(w, req, killResponse{
 		ID:          job.ID.Hex(),
