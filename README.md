@@ -13,7 +13,7 @@ See [bats tests folder](tests/bats) for example `curl` command based BATs tests,
 demo driving the goswim api to run a selection of Docker container based jobs.
 JSON jobs used in these tests are in the respective [tests](tests/*.json) files.
 
-[Dev Notes](docs/devnotes.nd)
+[Dev Notes](docs/devnotes.md)
 
 ## Features
 * Integrated with Hashicorp Vault AppRole.
