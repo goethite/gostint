@@ -1,0 +1,15 @@
+{
+  "qname": "powershell_q",
+  "container_image": "microsoft/powershell:latest",
+  "content": "",
+  "run": [
+    "pwsh", "-c",
+    "Write-Host \"Hello, World!\""
+  ],
+  "secret_refs": [
+    "mysecret@secret/data/my-secret.my-value",
+    "field_1@secret/data/my-form.field1",
+    "field_2@secret/data/my-form.field2",
+    "field_3@secret/data/my-form.field3"
+  ]
+}

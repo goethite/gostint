@@ -35,6 +35,8 @@ docker run --init -t \
   --name goswim -p 3333:3232 \
   --privileged=true \
   -v $(pwd)/etc:/var/lib/goswim \
+  --volume /etc/localtime:/etc/localtime:ro \
+  --volume /etc/timezone:/etc/timezone:ro \
   -e VAULT_ADDR="$VAULT_ADDR" \
   -e GOSWIM_DBAUTH_TOKEN="$token" \
   -e GOSWIM_ROLEID="$roleid" \

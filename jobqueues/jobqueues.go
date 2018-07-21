@@ -95,11 +95,11 @@ func (job *Job) String() string {
 }
 
 // Init Initialises the job queues loop
-func Init(db *mgo.Database, appRoleID string, nodeUuid string) {
+func Init(db *mgo.Database, appRoleID string, nodeUUID string) {
 	jobQueues.Db = db
 	jobQueues.AppRoleID = appRoleID
 	jobQueues.PulledImages = make(map[string]PulledImage)
-	jobQueues.NodeUUID = nodeUuid
+	jobQueues.NodeUUID = nodeUUID
 	// start go routine to loop on the queues collection for new work
 	// Qname defines the FIFO queue.
 	// Provide a Wake channel for immediate pull ???
@@ -186,6 +186,7 @@ func killHandler() {
 				"$nin": []string{
 					"failed",
 					"success",
+					"unkown",
 				},
 			},
 		}).All(&queues)
@@ -195,11 +196,10 @@ func killHandler() {
 		}
 
 		for _, job := range queues {
-			log.Printf("killHandler job: %v", job)
 			job.kill()
 		}
 
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(5000 * time.Millisecond)
 	}
 }
 
@@ -703,8 +703,6 @@ func createTar(entries *[]TarEntry) (rdrClose io.Reader, err error) {
 	return strings.NewReader(buf.String()), nil
 }
 
-// TODO: KILLs must target the goswim node directly in a HA cluster - so MUST
-// be done via the queues document somehow
 func (job *Job) kill() error {
 	if job.ContainerID == "" {
 		return errors.New("job.ContainerID is missing")
