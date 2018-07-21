@@ -1,5 +1,5 @@
 {
-  "qname": "play",
+  "qname": "play job2",
   "container_image": "jmal98/ansiblecm:2.5.5",
   "content": "",
   "entrypoint": [

@@ -9,7 +9,7 @@
   [ "$J" != "" ]
 }
 
-@test "job2 should be queued in the play queue" {
+@test "job2 should be queued in the play job2 queue" {
 
   J="$(cat $BATS_TMPDIR/job2.json)"
 
@@ -17,7 +17,7 @@
   status=$(echo $J | jq .status -r)
   qname=$(echo $J | jq .qname -r)
 
-  [ "$id" != "" ] && [ "$status" == "queued" ] && [ "$qname" == "play" ]
+  [ "$id" != "" ] && [ "$status" == "queued" ] && [ "$qname" == "play job2" ]
 }
 
 @test "Be able to retrieve the current status" {
@@ -43,7 +43,7 @@
   status="queued"
   for i in {1..40}
   do
-    sleep 2
+    sleep 5
     R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
     echo "R:$R" >&2
     status=$(echo $R | jq .status -r)
