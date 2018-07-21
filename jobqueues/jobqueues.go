@@ -25,6 +25,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -65,25 +66,26 @@ var jobQueues JobQueues
 
 // Job structure to represent a job submission request
 type Job struct {
-	ID             bson.ObjectId `json:"_id"             bson:"_id,omitempty"`
-	NodeUUID       string        `json:"node_uuid"       bson:"node_uuid"`
-	Qname          string        `json:"qname"           bson:"qname"`
-	ContainerImage string        `json:"container_image" bson:"container_image"`
-	Content        string        `json:"content"         bson:"content"`
-	EntryPoint     []string      `json:"entrypoint"      bson:"entrypoint"`
-	Run            []string      `json:"run"             bson:"run"`
+	ID             bson.ObjectId `json:"_id"               bson:"_id,omitempty"`
+	NodeUUID       string        `json:"node_uuid"         bson:"node_uuid"`
+	Qname          string        `json:"qname"             bson:"qname"`
+	ContainerImage string        `json:"container_image"   bson:"container_image"`
+	Content        string        `json:"content"           bson:"content"`
+	EntryPoint     []string      `json:"entrypoint"        bson:"entrypoint"`
+	Run            []string      `json:"run"               bson:"run"`
 	WorkingDir     string        `json:"working_directory" bson:"working_directory"`
-	Status         string        `json:"status"          bson:"status"`
-	ReturnCode     int           `json:"return_code"     bson:"return_code"`
-	Submitted      time.Time     `json:"submitted"       bson:"submitted"`
-	Started        time.Time     `json:"started"         bson:"started,omitempty"`
-	Ended          time.Time     `json:"ended"           bson:"ended,omitempty"`
-	Output         string        `json:"output"          bson:"output"`
-	SecretID       string        `json:"secret_id"       bson:"secret_id"`
-	SecretRefs     []string      `json:"secret_refs"     bson:"secret_refs"`
-	ContOnWarnings bool          `json:"cont_on_warnings" bson:"cont_on_warnings"`
-	ContainerID    string        `json:"container_id"    bson:"container_id"`
-	KillRequested  bool          `json:"kill_requested"  bson:"kill_requested"`
+	Status         string        `json:"status"            bson:"status"`
+	ReturnCode     int           `json:"return_code"       bson:"return_code"`
+	Submitted      time.Time     `json:"submitted"         bson:"submitted"`
+	Started        time.Time     `json:"started"           bson:"started,omitempty"`
+	Ended          time.Time     `json:"ended"             bson:"ended,omitempty"`
+	Output         string        `json:"output"            bson:"output"`
+	SecretID       string        `json:"secret_id"         bson:"secret_id"`
+	SecretRefs     []string      `json:"secret_refs"       bson:"secret_refs"`
+	SecretFileType string        `json:"secret_file_type"  bson:"secret_file_type"`
+	ContOnWarnings bool          `json:"cont_on_warnings"  bson:"cont_on_warnings"`
+	ContainerID    string        `json:"container_id"      bson:"container_id"`
+	KillRequested  bool          `json:"kill_requested"    bson:"kill_requested"`
 	contentRdr     io.Reader
 	secretsRdr     io.Reader
 	// ReturnCode     int           `json:"return_code"     bson:"return_code,omitempty"`
@@ -302,22 +304,39 @@ func (job *Job) runRequest() {
 		secrets[secVarName] = (secretValues.Data["data"].(map[string]interface{}))[secKey].(string)
 	}
 
-	// Create tar rdr for /secrets.yml in container
-	secretsYaml, err := yaml.Marshal(secrets)
-	if err != nil {
-		job.UpdateJob(bson.M{
-			"status": "failed",
-			"ended":  time.Now(),
-			"output": fmt.Sprintf("Failed to Marshal secrets to yaml for container injection: %s", err),
-		})
-		return
-	}
-	yamlHdr := []byte("---\n# goswim vault secrets injected:\n")
-	secretsYaml = append(yamlHdr, secretsYaml...)
+	// Create tar rdr for /secrets.yml|json in container
+	var entries []TarEntry
+	if job.SecretFileType == "yaml" {
+		secretsYAML, err := yaml.Marshal(secrets)
+		if err != nil {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("Failed to Marshal secrets to yaml for container injection: %s", err),
+			})
+			return
+		}
+		yamlHdr := []byte("---\n# goswim vault secrets injected:\n")
+		secretsYAML = append(yamlHdr, secretsYAML...)
 
-	entries := []TarEntry{
-		{Name: "secrets.yml", Content: secretsYaml},
+		entries = []TarEntry{
+			{Name: "secrets.yml", Content: secretsYAML},
+		}
+	} else if job.SecretFileType == "json" {
+		secretsJSON, err := json.Marshal(secrets)
+		if err != nil {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("Failed to Marshal secrets to json for container injection: %s", err),
+			})
+			return
+		}
+		entries = []TarEntry{
+			{Name: "secrets.json", Content: secretsJSON},
+		}
 	}
+
 	job.secretsRdr, err = createTar(&entries)
 	if err != nil {
 		job.UpdateJob(bson.M{

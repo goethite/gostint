@@ -59,14 +59,14 @@
   [ "$status" == "success" ]
 }
 
-@test "Should have final output in json" {
+@test "Should have final output in json, with injected secret" {
   R="$(cat $BATS_TMPDIR/job7.final.json)"
 
   echo "R:$R" >&2
   output="$(echo $R | jq .output -r)"
 
   # [ "$output" != "" ]
-  echo "$output" | grep "Hello, World!" 
+  echo "$output" | grep "mysecret : s3cr3t"
 }
 
 @test "Should delete the job id" {
