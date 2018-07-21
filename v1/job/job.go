@@ -233,6 +233,15 @@ func postJob(w http.ResponseWriter, req *http.Request) {
 	if jobRequest.SecretID == "" {
 		jobRequest.SecretID = req.Header["X-Secret-Token"][0]
 	}
+
+	// default to yaml for secrets file injection
+	if jobRequest.SecretFileType == "" {
+		jobRequest.SecretFileType = "yaml"
+	} else if jobRequest.SecretFileType != "yaml" && jobRequest.SecretFileType != "json" {
+		render.Render(w, req, ErrInvalidRequest(errors.New("secret_file_type must be either 'yaml' or 'json'")))
+		return
+	}
+
 	err := coll.Insert(jobRequest)
 	if err != nil {
 		panic(err)

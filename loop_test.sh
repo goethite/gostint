@@ -1,10 +1,11 @@
 #!/bin/bash -e
 
 CNT=0
-while
-  godo test
+RC=0
+while [ $RC = 0 ]
+do
   let CNT=$CNT+1
   echo "Iteration: $CNT"
-do
-  sleep 1
+  godo test
+  RC=$?
 done
