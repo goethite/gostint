@@ -10,7 +10,7 @@
   [ "$J" != "" ]
 }
 
-@test "job7 should be queued in the play queue" {
+@test "job7 should be queued in the powershell_q queue" {
 
   J="$(cat $BATS_TMPDIR/job7.json)"
   echo $J >&2
@@ -43,7 +43,7 @@
   echo "ID:$ID" >&2
 
   status="queued"
-  for i in {1..20}
+  for i in {1..40}
   do
     sleep 5
     R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
@@ -59,14 +59,14 @@
   [ "$status" == "success" ]
 }
 
-@test "Should have final output in json" {
+@test "Should have final output in json, with injected secret" {
   R="$(cat $BATS_TMPDIR/job7.final.json)"
 
   echo "R:$R" >&2
   output="$(echo $R | jq .output -r)"
 
   # [ "$output" != "" ]
-  echo "$output" | grep "Hello, World!"
+  echo "$output" | grep "mysecret : s3cr3t"
 }
 
 @test "Should delete the job id" {

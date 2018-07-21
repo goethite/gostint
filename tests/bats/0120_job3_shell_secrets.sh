@@ -9,7 +9,7 @@
   [ "$J" != "" ]
 }
 
-@test "job3 should be queued in the play queue" {
+@test "job3 should be queued in the play job3 queue" {
 
   J="$(cat $BATS_TMPDIR/job3.json)"
 
@@ -17,7 +17,7 @@
   status=$(echo $J | jq .status -r)
   qname=$(echo $J | jq .qname -r)
 
-  [ "$id" != "" ] && [ "$status" == "queued" ] && [ "$qname" == "play" ]
+  [ "$id" != "" ] && [ "$status" == "queued" ] && [ "$qname" == "play job3" ]
 }
 
 @test "Be able to retrieve the current status" {
