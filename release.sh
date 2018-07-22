@@ -50,10 +50,10 @@ echo "Pushing goethite/goswim:$TAG to dockerhub"
 docker push goethite/goswim:$TAG || exit 2
 
 echo "Tagging master as $TAG"
-git tag -a $TAG "$COMMENT"
+git tag -a $TAG -m "$COMMENT"
 
 echo "Pushing tag $TAG upstream"
 git push upstream $TAG
 
 echo "Releasing to github..."
-goreleaser
+goreleaser --rm-dist
