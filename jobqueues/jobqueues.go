@@ -88,7 +88,6 @@ type Job struct {
 	KillRequested  bool          `json:"kill_requested"    bson:"kill_requested"`
 	contentRdr     io.Reader
 	secretsRdr     io.Reader
-	// ReturnCode     int           `json:"return_code"     bson:"return_code,omitempty"`
 	// NOTE: ContainerImage: this may be passed in the content itself as meta data
 }
 
@@ -500,7 +499,7 @@ func (job *Job) runContainer() error {
 	}
 	imgAlreadyPulled := false
 	for _, img := range imgList {
-		if img.RepoTags[0] == job.ContainerImage {
+		if len(img.RepoTags) > 0 && img.RepoTags[0] == job.ContainerImage {
 			imgAlreadyPulled = true
 		}
 	}
