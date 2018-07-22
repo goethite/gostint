@@ -11,7 +11,7 @@ See [build_test_dev script](./build_test_against_dev.sh) for example starting th
 
 See [bats tests folder](tests/bats) for example `curl` command based BATs tests, that
 demo driving the goswim api to run a selection of Docker container based jobs.
-JSON jobs used in these tests are in the respective [tests](tests/*.json) files.
+JSON jobs used in these tests are in the respective [tests](tests/) files.
 
 [Dev Notes](docs/devnotes.md)
 
