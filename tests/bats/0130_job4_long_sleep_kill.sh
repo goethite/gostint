@@ -75,8 +75,33 @@
   R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/kill/$ID -X POST --header "X-Secret-Token: $SECRETID")"
   echo "R:$R" >&2
   status=$(echo $R | jq .status -r)
+  kill_requested=$(echo $R | jq .kill_requested -r)
 
-  [ "$status" == "stopping" ]
+  [ "$status" == "running" -a "$kill_requested" == "true" ]
+}
+
+@test "Status should eventually be stopping or failed" {
+  SECRETID="$(cat $BATS_TMPDIR/secretid)"
+  J="$(cat $BATS_TMPDIR/job4.json)"
+
+  ID=$(echo $J | jq ._id -r)
+  echo "ID:$ID" >&2
+
+  status="running"
+  for i in {1..20}
+  do
+    sleep 5
+    R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
+    echo "R:$R" >&2
+    status=$(echo $R | jq .status -r)
+    if [ "$status" != "running" ]
+    then
+      break
+    fi
+  done
+  echo "status after:$status" >&2
+  echo "$R" > $BATS_TMPDIR/job4.final.json
+  [ "$status" == "stopping" -o "$status" == "failed" ]
 }
 
 @test "Status should eventually be failed" {
@@ -86,7 +111,7 @@
   ID=$(echo $J | jq ._id -r)
   echo "ID:$ID" >&2
 
-  status="stopping"
+  status="stopping" # or failed, see above
   for i in {1..20}
   do
     sleep 5

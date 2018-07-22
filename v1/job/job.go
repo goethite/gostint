@@ -255,9 +255,10 @@ func postJob(w http.ResponseWriter, req *http.Request) {
 }
 
 type killResponse struct {
-	ID          string `json:"_id"`
-	ContainerID string `json:"container_id"`
-	Status      string `json:"status"`
+	ID            string `json:"_id"`
+	ContainerID   string `json:"container_id"`
+	Status        string `json:"status"`
+	KillRequested bool   `json:"kill_requested"`
 }
 
 func killJob(w http.ResponseWriter, req *http.Request) {
@@ -292,13 +293,14 @@ func killJob(w http.ResponseWriter, req *http.Request) {
 	// instance of goswim may not be the same one that is running the job
 
 	job.UpdateJob(bson.M{
-		"status":         "stopping",
+		// "status":         "stopping",
 		"kill_requested": true,
 	})
 
 	render.JSON(w, req, killResponse{
-		ID:          job.ID.Hex(),
-		ContainerID: job.ContainerID,
-		Status:      job.Status,
+		ID:            job.ID.Hex(),
+		ContainerID:   job.ContainerID,
+		Status:        job.Status,
+		KillRequested: true,
 	})
 }
