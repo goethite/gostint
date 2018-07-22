@@ -22,7 +22,7 @@ and injected into the job's running container.
 * Additional content can be flexibly injected into the job container from the
 json request.
 * Can run any job in any required docker image, e.g. Ansible, Terraform, busybox,
-and the versions of the job execution container can be version pinned.
+Powershell, and the versions of the job execution container can be pinned.
 * Serialisation queues are dynamic and created on the fly.
 
 ## Usage
