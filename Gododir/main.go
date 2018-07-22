@@ -16,7 +16,8 @@ func tasks(p *do.Project) {
 		c.Bash(`
       vault login root
       vault kv put secret/my-secret my-value=s3cr3t
-      vault kv put secret/my-form field1=value1 field2=value2 field3=value3
+      vault kv put secret/my-form field1=value1 field2=value2 field3=value3 \
+        KUBECONFIG_BASE64=$(echo '{"desc": "kubectl config content goes here"}' | base64 -w 0)
     `)
 	})
 
