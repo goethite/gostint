@@ -172,3 +172,12 @@ file into your script at runtime.
 #!/usr/local/bin/yamlsh --yaml=/secrets.yml
 ...
 ```
+
+# Releasing with goreleaser and docker
+Merges of PRs to goethite/goswim master will trigger `devel` builds of
+the docker image automatically in DockerHub.
+
+Versioned releases:
+```
+./release.sh v1.0.0 "comment for release..."
+```

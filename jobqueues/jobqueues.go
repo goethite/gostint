@@ -186,6 +186,7 @@ func killHandler() {
 			"kill_requested": true,
 			"status": bson.M{
 				"$nin": []string{
+					"stopping",
 					"failed",
 					"success",
 					"unkown",
@@ -734,9 +735,9 @@ func (job *Job) kill() error {
 		return err
 	}
 
-	// job.UpdateJob(bson.M{
-	// 	"status": "stopping",
-	// })
+	job.UpdateJob(bson.M{
+		"status": "stopping",
+	})
 
 	go func() {
 		timeout := time.Duration(15) * time.Second

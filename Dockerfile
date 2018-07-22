@@ -1,6 +1,6 @@
 ##############################################
 # Build:
-#   docker build --squash -t goswim .
+#   docker build -t goswim .
 #
 # Run:
 #   docker run --name goswim -p 3333:3232 \
