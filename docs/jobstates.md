@@ -26,3 +26,4 @@ fini((end));
   unknown --> fini;
 
 ```
+(use atom-mermaid plugin to render)
