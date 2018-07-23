@@ -12,11 +12,11 @@ sequenceDiagram
   requestor->>poster: submit job to run with secretId[1]
   poster->>goswim: POST job with secretId[2]
   goswim->>vault: authenticate poster (approle: secretId[2])
-  vault-->>goswim: token[1] (discarded/revoked)
+  vault-->>goswim: token[2] (discarded/revoked)
   goswim->>queues: push to a queue
   queues->>goswim: pop next from a queue
   goswim->>vault: authenticate requestor (approle: secretId[1])
-  vault-->>goswim: token[2]
+  vault-->>goswim: token[1]
   goswim->>vault: get requested secrets for job
   goswim->>docker: runs requested job with secrets from vault
   docker-->>goswim: job completes
