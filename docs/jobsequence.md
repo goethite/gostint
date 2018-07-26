@@ -370,7 +370,7 @@ sequenceDiagram
   requestor->>vault: request wrapped SecretID for AppRole(goswim)
   vault-->>requestor: wrapped SecretID (token)
 
-  requestor->>vault: request transit keyring to encrypt job payload (inc wrapped SecretID)
+  requestor->>vault: request transit keyring to encrypt job payload
   %% the plaintext sent is a base64 encoded json document
   vault-->>requestor: cyphertext
 
@@ -380,7 +380,7 @@ sequenceDiagram
 
   %% request job to be posted/routing
   requestor->>poster: (authenticates with)
-  requestor->>poster: POST job qname+default token+cubbyhole path
+  requestor->>poster: POST job qname+default token+cubbyhole path+wrapped SecretID
 
   %% This time, even if the poster is hacked and intercepts the POST request,
   %% and using the default token to retrieve the cubbyhole, the data returned
@@ -399,6 +399,7 @@ sequenceDiagram
   %% leave the payload encrypted until it is needed for the job to run.
 
   goswim->>queues: Queues the (still encrypted) job request
+  %% Note; the wrapped SecretID is not encrypted
   goswim-->>poster: job queued response
   poster-->>requestor: job queued response
 
@@ -406,16 +407,17 @@ sequenceDiagram
 
   queues->>goswim: job is popped from the queue
 
-  % Decrypt
-  %% goswim->>goswim: decrypt payload with RSA private key
-  goswim->>vault: request decrypt of job using keyring
-  vault-->>goswim: plaintext base64 encoded job request payload
-
-  goswim->>vault: unwrap wrapped SecretID (from payload)
+  %% authenticate
+  goswim->>vault: unwrap wrapped SecretID
   vault-->>goswim: SecretID
   goswim->>vault: authenticate with RoleID+SecretID
   vault-->>goswim: token (with appropriate policies for automation)
   %% this token is used by goswim going fwd and passed to running job
+
+  %% Decrypt
+  %% goswim->>goswim: decrypt payload with RSA private key
+  goswim->>vault: request decrypt of job using keyring
+  vault-->>goswim: plaintext base64 encoded job request payload
 
   goswim->>vault: retrieve secrets at refs from job request
   vault-->>goswim: secrets
