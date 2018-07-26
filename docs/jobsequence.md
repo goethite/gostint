@@ -339,13 +339,102 @@ my PoC [vault-e2e-plugin](https://github.com/gbevan/vault-e2e-plugin) for Vault.
 could reduce the number of requests to the vault over the network.
 
 [&#xb3;] Results passing through the intermediary poster could again be
-intercepted.  If required, we could again use e2e encryption, but this time
-using a requestor's own RSA key pair.
+intercepted.  If required, we could again use e2e/transit encryption, but this time
+using a requestor's own RSA key pair/transit keyring.
 
 This solution gives us the best of both worlds, namely end-to-end encryption
 AND tamper / interception detection during transit through the intermediary
 poster / routing.
 
+### Repeat of the above diagram but this time based on new understanding of the transit secret engine.
+
+```mermaid
+sequenceDiagram
+  participant requestor
+  participant poster as poster / routing
+  participant o as orchestrator e.g. kubernetes
+  participant goswim
+  participant queues
+  participant vault as vault transit / e2e
+  participant docker
+
+  %% Enrolement
+  o->>vault: Onboards requestor
+  o->>vault: Onboards goswim's transit keyring, policies, etc...
+  %% requestor can only encrypt.
+  %% goswim can also decrypt.
+  %% poster, if even in vault at all, has no permissions here.
+
+  %% build job to submit
+  requestor->>vault: (authenticates with)
+  requestor->>vault: request wrapped SecretID for AppRole(goswim)
+  vault-->>requestor: wrapped SecretID (token)
+
+  requestor->>vault: request transit keyring to encrypt job payload (inc wrapped SecretID)
+  %% the plaintext sent is a base64 encoded json document
+  vault-->>requestor: cyphertext
+
+  requestor->>vault: request a default token ttl=10m use-limit=2
+  vault-->>requestor: a default token
+  requestor->>vault: place encrypted job payload in the default token's cubbyhole
+
+  %% request job to be posted/routing
+  requestor->>poster: (authenticates with)
+  requestor->>poster: POST job qname+default token+cubbyhole path
+
+  %% This time, even if the poster is hacked and intercepts the POST request,
+  %% and using the default token to retrieve the cubbyhole, the data returned
+  %% is encrypted, such that only goswim's transit keyring can decrypt it.
+  %% This tampering of the request can be detected to raise an alert of the
+  %% MITM attack.
+
+  poster->>goswim: (authenticates with)
+  poster->>goswim: fwd POST job request
+
+  %% extract job from cubbyhole
+  goswim->>vault: retrieve cubbyhole from path using default token (last use)
+  vault-->>goswim: (still encrypted) job request from cubbyhole
+
+  %% we can decrypt here or at point of job execution, in this example we will
+  %% leave the payload encrypted until it is needed for the job to run.
+
+  goswim->>queues: Queues the (still encrypted) job request
+  goswim-->>poster: job queued response
+  poster-->>requestor: job queued response
+
+  goswim-->>goswim: sometime later
+
+  queues->>goswim: job is popped from the queue
+
+  % Decrypt
+  %% goswim->>goswim: decrypt payload with RSA private key
+  goswim->>vault: request decrypt of job using keyring
+  vault-->>goswim: plaintext base64 encoded job request payload
+
+  goswim->>vault: unwrap wrapped SecretID (from payload)
+  vault-->>goswim: SecretID
+  goswim->>vault: authenticate with RoleID+SecretID
+  vault-->>goswim: token (with appropriate policies for automation)
+  %% this token is used by goswim going fwd and passed to running job
+
+  goswim->>vault: retrieve secrets at refs from job request
+  vault-->>goswim: secrets
+
+  goswim->>docker: run job request with injected secrets...
+  docker-->>goswim: return results
+  goswim->>queues: save results
+  goswim->>vault: revoke approle token (drop job privs)
+
+  requestor->>poster: poll for results
+  poster->>goswim: poll for results
+  goswim->> queues: retrieve results
+  queues-->>goswim: results
+  goswim-->>poster: results&#xb3;
+  poster-->>requestor: results
+
+  requestor-->>requestor: loop polls until success/failed/notauthorised/unknown
+
+```
 ---
 
 Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
