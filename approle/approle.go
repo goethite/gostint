@@ -27,12 +27,12 @@ import (
 )
 
 // Authenticate using our AppRoleID and given SecretID with Vault
-func Authenticate(appRoleID string, secretID string) (string, *api.Client, error) {
+func Authenticate(appRoleID string, wrapSecretID string) (string, *api.Client, error) {
 	/////////////////////////////////////
 	// AppRole Authenticate
 	// Get Token for passed secret_id
-	if secretID == "" {
-		return "", &api.Client{}, fmt.Errorf("Vault SecretID was not provided in request")
+	if wrapSecretID == "" {
+		return "", &api.Client{}, fmt.Errorf("Vault SecretID Wrapping Token was not provided in request")
 	}
 
 	client, err := api.NewClient(&api.Config{
@@ -41,6 +41,13 @@ func Authenticate(appRoleID string, secretID string) (string, *api.Client, error
 	if err != nil {
 		return "", &api.Client{}, fmt.Errorf("Failed create vault client api: %s", err)
 	}
+
+	// Unwrap the wrapping token to get the SecretID
+	secret, err := client.Logical().Unwrap(wrapSecretID)
+	if err != nil {
+		return "", &api.Client{}, fmt.Errorf("Request failed to unwrap the token to retrieve the SecretID - SECURITY ALERT: THIS REQUEST MAY HAVE BEEN TAMPERED WITH err: %s", err)
+	}
+	secretID := secret.Data["secret_id"]
 
 	// Authenticate this request using AppRole RoleID and SecretID
 	data := map[string]interface{}{

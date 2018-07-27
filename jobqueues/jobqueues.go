@@ -80,7 +80,7 @@ type Job struct {
 	Started        time.Time     `json:"started"           bson:"started,omitempty"`
 	Ended          time.Time     `json:"ended"             bson:"ended,omitempty"`
 	Output         string        `json:"output"            bson:"output"`
-	SecretID       string        `json:"secret_id"         bson:"secret_id"`
+	WrapSecretID   string        `json:"wrap_secret_id"    bson:"wrap_secret_id" description:"Wrapping Token for the SecretID"`
 	SecretRefs     []string      `json:"secret_refs"       bson:"secret_refs"`
 	SecretFileType string        `json:"secret_file_type"  bson:"secret_file_type"`
 	ContOnWarnings bool          `json:"cont_on_warnings"  bson:"cont_on_warnings"`
@@ -224,7 +224,6 @@ func (job *Job) UpdateJob(u bson.M) (*Job, error) {
 }
 
 func (job *Job) runRequest() {
-
 	if job.KillRequested {
 		job.UpdateJob(bson.M{
 			"status": "failed",
@@ -234,7 +233,7 @@ func (job *Job) runRequest() {
 		return
 	}
 
-	token, client, err := approle.Authenticate(jobQueues.AppRoleID, job.SecretID)
+	token, client, err := approle.Authenticate(jobQueues.AppRoleID, job.WrapSecretID)
 	if err != nil {
 		job.UpdateJob(bson.M{
 			"status": "notauthorised",

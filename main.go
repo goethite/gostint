@@ -166,7 +166,7 @@ func authenticate(next http.Handler) http.Handler {
 			return
 		}
 		token := r.Header["X-Auth-Token"][0]
-		// log.Printf("token: %v", token)
+		// log.Printf("X-Auth-Token: %v", token)
 
 		client, err := api.NewClient(&api.Config{
 			Address: os.Getenv("VAULT_ADDR"),

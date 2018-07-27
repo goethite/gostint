@@ -224,9 +224,9 @@ func postJob(w http.ResponseWriter, req *http.Request) {
 	jobRequest := job
 	jobRequest.ID = newID
 
-	if jobRequest.SecretID == "" {
+	if jobRequest.WrapSecretID == "" {
 		// jobRequest.SecretID = req.Header["X-Secret-Token"][0]
-		render.Render(w, req, ErrInvalidRequest(errors.New("AppRole's SecretID must be present in the job request")))
+		render.Render(w, req, ErrInvalidRequest(errors.New("AppRole SecretID's Wrapping Token must be present in the job request")))
 		return
 	}
 
