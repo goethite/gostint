@@ -7,9 +7,10 @@
   echo "$TOKEN" > $BATS_TMPDIR/token
 
   # Get secretId for the approle
-  SECRETID=$(vault write -f auth/approle/role/goswim-role/secret-id | grep "^secret_id " | awk '{ print $2; }')
-  echo "$SECRETID" > $BATS_TMPDIR/secretid
-  cat ../job5_terraform.json | jq ".secret_id=\"$SECRETID\"" > $BATS_TMPDIR/job.json
+  WRAPSECRETID=$(vault write -wrap-ttl=144h -f auth/approle/role/goswim-role/secret-id -format=json | jq .wrap_info.token -r)
+  echo "WRAPSECRETID: $WRAPSECRETID" >&2
+
+  cat ../job5_terraform.json | jq ".wrap_secret_id=\"$WRAPSECRETID\"" > $BATS_TMPDIR/job.json
 
   J="$(curl -k -s https://127.0.0.1:3232/v1/api/job --header "X-Auth-Token: $TOKEN" -X POST -d @$BATS_TMPDIR/job.json | tee $BATS_TMPDIR/job5.json)"
   [ "$J" != "" ]
@@ -29,7 +30,6 @@
 @test "Be able to retrieve the current status" {
   TOKEN="$(cat $BATS_TMPDIR/token)"
   echo "TOKEN: $TOKEN" >&2
-  # SECRETID="$(cat $BATS_TMPDIR/secretid)"
   J="$(cat $BATS_TMPDIR/job5.json)"
 
   ID=$(echo $J | jq ._id -r)
@@ -49,7 +49,6 @@
 @test "Status should eventually be success" {
   TOKEN="$(cat $BATS_TMPDIR/token)"
   echo "TOKEN: $TOKEN" >&2
-  # SECRETID="$(cat $BATS_TMPDIR/secretid)"
   J="$(cat $BATS_TMPDIR/job5.json)"
 
   ID=$(echo $J | jq ._id -r)
