@@ -11,11 +11,35 @@
   echo "WRAPSECRETID: $WRAPSECRETID" >&2
   # echo "$WRAPSECRETID" > $BATS_TMPDIR/wrapsecretid
 
-  cat ../job1.json | jq ".wrap_secret_id=\"$WRAPSECRETID\"" > $BATS_TMPDIR/job.json
+  # cat ../job1.json | jq ".wrap_secret_id=\"$WRAPSECRETID\"" > $BATS_TMPDIR/job.json
+  # cat $BATS_TMPDIR/job.json >&2
+
+  QNAME=$(cat ../job1.json | jq .qname -r)
+
+  # encrypt job payload using vault transit secret engine
+  B64=$(base64 < ../job1.json)
+  E=$(vault write transit/encrypt/goswim plaintext="$B64" -format=json | jq .data.ciphertext -r)
+  echo "E: $E"
+
+  # Put encrypted payload in a cubbyhole of an ephemeral token
+  CUBBYTOKEN=$(vault token create -policy=default -ttl=60m -use-limit=2 -format=json | jq .auth.client_token -r)
+  echo "CUBBYTOKEN: $CUBBYTOKEN" >&2
+
+  VAULT_TOKEN=$CUBBYTOKEN vault write cubbyhole/job payload="$E" >&2 || exit 1
+
+  # Create new job request with encrypted payload
+  jq --arg qname "$QNAME" \
+     --arg cubby_token "$CUBBYTOKEN" \
+     --arg cubby_path "cubbyhole/job" \
+     --arg wrap_secret_id "$WRAPSECRETID" \
+     '. | .qname=$qname | .cubby_token=$cubby_token | .cubby_path=$cubby_path | .wrap_secret_id=$wrap_secret_id' \
+     <<<'{}' >$BATS_TMPDIR/job.json
+  cat $BATS_TMPDIR/job.json >&2
 
   J="$(curl -k -s https://127.0.0.1:3232/v1/api/job --header "X-Auth-Token: $TOKEN" -X POST -d @$BATS_TMPDIR/job.json | tee $BATS_TMPDIR/job1.json)"
   echo "J: $J" >&2
   [ "$J" != "" ]
+  # /bin/false
 }
 
 @test "job1 should be queued in the play job1 queue" {

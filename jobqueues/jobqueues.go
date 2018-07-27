@@ -66,29 +66,41 @@ var jobQueues JobQueues
 
 // Job structure to represent a job submission request
 type Job struct {
-	ID             bson.ObjectId `json:"_id"               bson:"_id,omitempty"`
-	NodeUUID       string        `json:"node_uuid"         bson:"node_uuid"`
-	Qname          string        `json:"qname"             bson:"qname"`
-	ContainerImage string        `json:"container_image"   bson:"container_image"`
-	Content        string        `json:"content"           bson:"content"`
-	EntryPoint     []string      `json:"entrypoint"        bson:"entrypoint"`
-	Run            []string      `json:"run"               bson:"run"`
-	WorkingDir     string        `json:"working_directory" bson:"working_directory"`
-	Status         string        `json:"status"            bson:"status"`
-	ReturnCode     int           `json:"return_code"       bson:"return_code"`
-	Submitted      time.Time     `json:"submitted"         bson:"submitted"`
-	Started        time.Time     `json:"started"           bson:"started,omitempty"`
-	Ended          time.Time     `json:"ended"             bson:"ended,omitempty"`
-	Output         string        `json:"output"            bson:"output"`
-	WrapSecretID   string        `json:"wrap_secret_id"    bson:"wrap_secret_id" description:"Wrapping Token for the SecretID"`
-	SecretRefs     []string      `json:"secret_refs"       bson:"secret_refs"`
-	SecretFileType string        `json:"secret_file_type"  bson:"secret_file_type"`
-	ContOnWarnings bool          `json:"cont_on_warnings"  bson:"cont_on_warnings"`
-	ContainerID    string        `json:"container_id"      bson:"container_id"`
-	KillRequested  bool          `json:"kill_requested"    bson:"kill_requested"`
-	contentRdr     io.Reader
-	secretsRdr     io.Reader
+	ID       bson.ObjectId `json:"_id"               bson:"_id,omitempty"`
+	NodeUUID string        `json:"node_uuid"         bson:"node_uuid" description:"goswim node's unique identifier"`
+
+	// These fields are passed from requestor in POSTed request:
+	Qname        string `    json:"qname"             bson:"qname"`
+	CubbyToken   string `    json:"cubby_token"       bson:"cubby_token"`
+	CubbyPath    string `    json:"cubby_path"        bson:"cubby_path"`
+	WrapSecretID string `    json:"wrap_secret_id"    bson:"wrap_secret_id" description:"Wrapping Token for the SecretID"`
+
+	Payload string `         json:"payload"           bson:"payload" description:"Encrypted payload for the job from requestor, populated temporarily from the cubbyhole"`
+
+	// These are populated from the decrypted payload
 	// NOTE: ContainerImage: this may be passed in the content itself as meta data
+	ContainerImage string   `json:"container_image"   bson:"container_image"`
+	Content        string   `json:"content"           bson:"content"`
+	EntryPoint     []string `json:"entrypoint"        bson:"entrypoint"`
+	Run            []string `json:"run"               bson:"run"`
+	WorkingDir     string   `json:"working_directory" bson:"working_directory"`
+	SecretRefs     []string `json:"secret_refs"       bson:"secret_refs"`
+	SecretFileType string   `json:"secret_file_type"  bson:"secret_file_type"`
+	ContOnWarnings bool     `json:"cont_on_warnings"  bson:"cont_on_warnings"`
+
+	// These are returned
+	Status        string    `json:"status"            bson:"status"`
+	ReturnCode    int       `json:"return_code"       bson:"return_code"`
+	Submitted     time.Time `json:"submitted"         bson:"submitted"`
+	Started       time.Time `json:"started"           bson:"started,omitempty"`
+	Ended         time.Time `json:"ended"             bson:"ended,omitempty"`
+	Output        string    `json:"output"            bson:"output"`
+	ContainerID   string    `json:"container_id"      bson:"container_id"`
+	KillRequested bool      `json:"kill_requested"    bson:"kill_requested"`
+
+	// Internal:
+	contentRdr io.Reader
+	secretsRdr io.Reader
 }
 
 func (job *Job) String() string {
@@ -254,6 +266,66 @@ func (job *Job) runRequest() {
 		}
 	}()
 
+	// Decrypt the payload and merge into jobRequest
+	resp, err := client.Logical().Write("transit/decrypt/goswim", map[string]interface{}{
+		"ciphertext": job.Payload,
+	})
+	if err != nil {
+		job.UpdateJob(bson.M{
+			"status": "failed",
+			"ended":  time.Now(),
+			"output": fmt.Sprintf("Failed to decrypt payload via vault: %s", err.Error()),
+		})
+		return
+	}
+	payloadJSON, err2 := base64.StdEncoding.DecodeString(resp.Data["plaintext"].(string))
+	if err2 != nil {
+		job.UpdateJob(bson.M{
+			"status": "failed",
+			"ended":  time.Now(),
+			"output": fmt.Sprintf("Failed to decode payload content base64: %s", err2),
+		})
+		return
+	}
+	var payloadObj Job
+	err = json.Unmarshal(payloadJSON, &payloadObj)
+	if err != nil {
+		job.UpdateJob(bson.M{
+			"status": "failed",
+			"ended":  time.Now(),
+			"output": fmt.Sprintf("Failed unmarshaling json from payload: %s", err),
+		})
+		return
+	}
+
+	// sanity check
+	if payloadObj.Qname != job.Qname {
+		job.UpdateJob(bson.M{
+			"status": "failed",
+			"ended":  time.Now(),
+			"output": fmt.Sprintf("payload qname and job request qname do not match: '%s' != '%s'", payloadObj.Qname, job.Qname),
+		})
+		return
+	}
+	// Cleanup job of resolved items
+	job.CubbyToken = ""
+	job.CubbyPath = ""
+	job.WrapSecretID = ""
+	job.Payload = ""
+	// Merge required fields from payload
+	job.ContainerImage = payloadObj.ContainerImage
+	job.Content = payloadObj.Content
+	job.EntryPoint = payloadObj.EntryPoint
+	job.Run = payloadObj.Run
+	job.WorkingDir = payloadObj.WorkingDir
+	job.SecretRefs = payloadObj.SecretRefs
+	job.SecretFileType = payloadObj.SecretFileType
+	job.ContOnWarnings = payloadObj.ContOnWarnings
+
+	if job.SecretFileType == "" {
+		job.SecretFileType = "yaml"
+	}
+
 	// Allow SecretRefs to be passed in job, e.g.
 	// SecretRefs: see tests/job1.json
 	// briefly cache the path response to allow multiple values to be extracted
@@ -334,6 +406,13 @@ func (job *Job) runRequest() {
 		entries = []TarEntry{
 			{Name: "secrets.json", Content: secretsJSON},
 		}
+	} else {
+		job.UpdateJob(bson.M{
+			"status": "failed",
+			"ended":  time.Now(),
+			"output": fmt.Sprintf("Invalid SecretFileType: '%s'", job.SecretFileType),
+		})
+		return
 	}
 
 	job.secretsRdr, err = createTar(&entries)

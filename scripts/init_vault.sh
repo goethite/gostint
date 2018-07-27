@@ -47,6 +47,12 @@ curl -s \
   --data '{"policy": "path \"database/creds/goswim-dbauth-role\" {\n  capabilities = [\"read\"]\n}"}' \
   ${VAULT_ADDR}/v1/sys/policy/goswim-mongodb-auth
 
+echo '=== Enable transit plugin ==============================='
+vault secrets enable transit
+
+echo '=== Create goswim instance transit keyring =============='
+vault write -f transit/keys/goswim
+
 # Enable Vault AppRole
 echo '=== enable AppRole auth ================================='
 vault auth enable approle
@@ -59,6 +65,14 @@ curl -s \
   --data '{"policy": "path \"secret/*\" {\n  capabilities = [\"read\"]\n}"}' \
   ${VAULT_ADDR}/v1/sys/policy/goswim-approle-kv
 
+# Create policy to access transit decrypt goswim for approle
+echo '=== Create policy to access transit decrypt goswim for goswim-role =========='
+curl -s \
+  --request POST \
+  --header 'X-Vault-Token: root' \
+  --data '{"policy": "path \"transit/decrypt/goswim\" {\n  capabilities = [\"update\"]\n}"}' \
+  ${VAULT_ADDR}/v1/sys/policy/goswim-approle-transit-decrypt-goswim
+
 # Create named role for goswim
 echo '=== Create approle role for goswim ======================'
 vault write auth/approle/role/goswim-role \
@@ -67,7 +81,7 @@ vault write auth/approle/role/goswim-role \
   token_num_uses=10 \
   token_ttl=20m \
   token_max_ttl=30m \
-  policies="goswim-approle-kv"
+  policies="goswim-approle-kv,goswim-approle-transit-decrypt-goswim"
 
 # Get RoleID for goswim
 export GOSWIM_ROLEID=`vault read -format=yaml -field=data auth/approle/role/goswim-role/role-id | awk '{print $2;}'`

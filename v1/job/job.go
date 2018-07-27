@@ -21,8 +21,10 @@ package job
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -31,6 +33,7 @@ import (
 	"github.com/globalsign/mgo/bson"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/render"
+	"github.com/hashicorp/vault/api"
 )
 
 const notfound = "not found"
@@ -225,20 +228,27 @@ func postJob(w http.ResponseWriter, req *http.Request) {
 	jobRequest.ID = newID
 
 	if jobRequest.WrapSecretID == "" {
-		// jobRequest.SecretID = req.Header["X-Secret-Token"][0]
 		render.Render(w, req, ErrInvalidRequest(errors.New("AppRole SecretID's Wrapping Token must be present in the job request")))
 		return
 	}
 
-	// default to yaml for secrets file injection
-	if jobRequest.SecretFileType == "" {
-		jobRequest.SecretFileType = "yaml"
-	} else if jobRequest.SecretFileType != "yaml" && jobRequest.SecretFileType != "json" {
-		render.Render(w, req, ErrInvalidRequest(errors.New("secret_file_type must be either 'yaml' or 'json'")))
+	// get encrypted payload from cubbyhole
+	client, err := api.NewClient(&api.Config{
+		Address: os.Getenv("VAULT_ADDR"),
+	})
+	if err != nil {
+		render.Render(w, req, ErrInternalError(fmt.Errorf("Failed create vault client api: %s", err)))
 		return
 	}
+	client.SetToken(job.CubbyToken)
+	resp, err := client.Logical().Read(job.CubbyPath)
+	if err != nil {
+		render.Render(w, req, ErrInternalError(fmt.Errorf("Failed to read cubbyhole from vault: %s", err)))
+		return
+	}
+	job.Payload = resp.Data["payload"].(string)
 
-	err := coll.Insert(jobRequest)
+	err = coll.Insert(jobRequest)
 	if err != nil {
 		panic(err)
 	}
