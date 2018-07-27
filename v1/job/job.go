@@ -224,14 +224,10 @@ func postJob(w http.ResponseWriter, req *http.Request) {
 	jobRequest := job
 	jobRequest.ID = newID
 
-	// if there isnt another SecretID in the job, then inject the one from the
-	// initial request.  This could allow support for two levels of authentication
-	// 1) the POSTer of the request, and 2) the originator of the job itself.
-	// e.g. the original job request may have been created by some orchestration
-	// tool and then passed to an intermediary, like a Lambda function, which then
-	// POSTs the reques to goswim.
 	if jobRequest.SecretID == "" {
-		jobRequest.SecretID = req.Header["X-Secret-Token"][0]
+		// jobRequest.SecretID = req.Header["X-Secret-Token"][0]
+		render.Render(w, req, ErrInvalidRequest(errors.New("AppRole's SecretID must be present in the job request")))
+		return
 	}
 
 	// default to yaml for secrets file injection

@@ -1,11 +1,17 @@
 #!/usr/bin/env bats
 
 @test "Submitting job7 powershell should return json" {
+  # Get a default token for the api post authentication
+  TOKEN=$(vault write -f auth/token/create policies=default -format=json | jq .auth.client_token -r)
+  echo "$TOKEN"
+  echo "$TOKEN" > $BATS_TMPDIR/token
+
   # Get secretId for the approle
   SECRETID=$(vault write -f auth/approle/role/goswim-role/secret-id | grep "^secret_id " | awk '{ print $2; }')
   echo "$SECRETID" > $BATS_TMPDIR/secretid
+  cat ../job7_powershell.json | jq ".secret_id=\"$SECRETID\"" > $BATS_TMPDIR/job.json
 
-  J="$(curl -k -s https://127.0.0.1:3232/v1/api/job --header "X-Secret-Token: $SECRETID" -X POST -d @../job7_powershell.json | tee $BATS_TMPDIR/job7.json)"
+  J="$(curl -k -s https://127.0.0.1:3232/v1/api/job --header "X-Auth-Token: $TOKEN" -X POST -d @$BATS_TMPDIR/job.json | tee $BATS_TMPDIR/job7.json)"
   echo $J >&2
   [ "$J" != "" ]
 }
@@ -23,12 +29,14 @@
 }
 
 @test "Be able to retrieve the current status" {
-  SECRETID="$(cat $BATS_TMPDIR/secretid)"
+  TOKEN="$(cat $BATS_TMPDIR/token)"
+  echo "TOKEN: $TOKEN" >&2
+  # SECRETID="$(cat $BATS_TMPDIR/secretid)"
   J="$(cat $BATS_TMPDIR/job7.json)"
 
   ID=$(echo $J | jq ._id -r)
 
-  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
+  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Auth-Token: $TOKEN")"
   echo "R:$R" >&2
   status=$(echo $R | jq .status -r)
 
@@ -36,7 +44,9 @@
 }
 
 @test "Status should eventually be success" {
-  SECRETID="$(cat $BATS_TMPDIR/secretid)"
+  TOKEN="$(cat $BATS_TMPDIR/token)"
+  echo "TOKEN: $TOKEN" >&2
+  # SECRETID="$(cat $BATS_TMPDIR/secretid)"
   J="$(cat $BATS_TMPDIR/job7.json)"
 
   ID=$(echo $J | jq ._id -r)
@@ -46,7 +56,7 @@
   for i in {1..40}
   do
     sleep 5
-    R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
+    R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Auth-Token: $TOKEN")"
     echo "R:$R" >&2
     status=$(echo $R | jq .status -r)
     if [ "$status" != "queued" -a "$status" != "running" ]
@@ -70,13 +80,15 @@
 }
 
 @test "Should delete the job id" {
-  SECRETID="$(cat $BATS_TMPDIR/secretid)"
+  TOKEN="$(cat $BATS_TMPDIR/token)"
+  echo "TOKEN: $TOKEN" >&2
+  # SECRETID="$(cat $BATS_TMPDIR/secretid)"
   J="$(cat $BATS_TMPDIR/job7.json)"
 
   ID=$(echo $J | jq ._id -r)
   echo "ID:$ID" >&2
 
-  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID -X DELETE --header "X-Secret-Token: $SECRETID")"
+  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID -X DELETE --header "X-Auth-Token: $TOKEN")"
   echo "R:$R" >&2
 
   DELID=$(echo "$R" | jq ._id -r)
@@ -85,23 +97,27 @@
 }
 
 @test "Lookup for deleted id should return Not Found error" {
-  SECRETID="$(cat $BATS_TMPDIR/secretid)"
+  TOKEN="$(cat $BATS_TMPDIR/token)"
+  echo "TOKEN: $TOKEN" >&2
+  # SECRETID="$(cat $BATS_TMPDIR/secretid)"
   J="$(cat $BATS_TMPDIR/job7.json)"
 
   ID=$(echo $J | jq ._id -r)
   echo "ID:$ID" >&2
 
-  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
+  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Auth-Token: $TOKEN")"
   echo "R:$R" >&2
 
   echo "$R" | grep "Not Found"
 }
 
 @test "Lookup for garbage id should return Invalid job ID error" {
-  SECRETID="$(cat $BATS_TMPDIR/secretid)"
+  TOKEN="$(cat $BATS_TMPDIR/token)"
+  echo "TOKEN: $TOKEN" >&2
+  # SECRETID="$(cat $BATS_TMPDIR/secretid)"
   J="$(cat $BATS_TMPDIR/job7.json)"
 
-  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/DOESNOTEXIST --header "X-Secret-Token: $SECRETID")"
+  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/DOESNOTEXIST --header "X-Auth-Token: $TOKEN")"
   echo "R:$R" >&2
 
   echo "$R" | grep "Invalid job ID"
