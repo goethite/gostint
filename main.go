@@ -22,11 +22,11 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 
-	"github.com/gbevan/goswim/approle"
 	"github.com/gbevan/goswim/jobqueues"
 	"github.com/gbevan/goswim/pingclean"
 	"github.com/gbevan/goswim/v1/job"
@@ -118,6 +118,9 @@ func ErrInvalidRequest(err error) render.Renderer {
 	}
 }
 
+/*
+ * was in PoC - authenticating poster with secret-id, but poster should have its
+ * own way to generate a token to authenticate with, e.g. its own AppRole.
 func authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := r.Header["X-Secret-Token"]; !ok {
@@ -133,6 +136,16 @@ func authenticate(next http.Handler) http.Handler {
 			return
 		}
 		client.SetToken(unusedToken)
+
+		// Verify the token is good
+		tokDetails, err := client.Logical().Read("auth/token/lookup-self")
+		if err != nil {
+			log.Printf("Authentication Failure with Token: %v", err)
+			render.Render(w, r, ErrInvalidRequest(err))
+			return
+		}
+		log.Printf("tokDetails: %v", tokDetails)
+
 		// Revoke the unused token
 		_, err = client.Logical().Write("auth/token/revoke-self", nil)
 		if err != nil {
@@ -143,7 +156,45 @@ func authenticate(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
+*/
 
+func authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := r.Header["X-Auth-Token"]; !ok {
+			log.Println("Error: Missing X-Auth-Token")
+			render.Render(w, r, ErrInvalidRequest(errors.New("Missing X-Auth-Token")))
+			return
+		}
+		token := r.Header["X-Auth-Token"][0]
+		// log.Printf("token: %v", token)
+
+		client, err := api.NewClient(&api.Config{
+			Address: os.Getenv("VAULT_ADDR"),
+		})
+		if err != nil {
+			errmsg := fmt.Sprintf("Failed create vault client api: %s", err)
+			log.Println(errmsg)
+			render.Render(w, r, ErrInvalidRequest(fmt.Errorf(errmsg)))
+			return
+		}
+
+		client.SetToken(token)
+
+		// Verify the token is good
+		_, err = client.Logical().Read("auth/token/lookup-self")
+		if err != nil {
+			log.Printf("Authentication Failure with Token: %v", err)
+			render.Render(w, r, ErrInvalidRequest(err))
+			return
+		}
+		// log.Printf("tokDetails: %v", tokDetails)
+
+		ctx := context.WithValue(r.Context(), "authenticated", true)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// Routes defines RESTful api middleware and routes.
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(

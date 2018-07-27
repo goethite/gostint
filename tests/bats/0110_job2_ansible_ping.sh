@@ -1,11 +1,18 @@
 #!/usr/bin/env bats
 
 @test "Submitting job2 ansible ping should return json" {
+  # Get a default token for the api post authentication
+  TOKEN=$(vault write -f auth/token/create policies=default -format=json | jq .auth.client_token -r)
+  echo "$TOKEN"
+  echo "$TOKEN" > $BATS_TMPDIR/token
+
   # Get secretId for the approle
   SECRETID=$(vault write -f auth/approle/role/goswim-role/secret-id | grep "^secret_id " | awk '{ print $2; }')
   echo "$SECRETID" > $BATS_TMPDIR/secretid
 
-  J="$(curl -k -s https://127.0.0.1:3232/v1/api/job --header "X-Secret-Token: $SECRETID" -X POST -d @../job2_ansible.json | tee $BATS_TMPDIR/job2.json)"
+  cat ../job2_ansible.json | jq ".secret_id=\"$SECRETID\"" > $BATS_TMPDIR/job.json
+
+  J="$(curl -k -s https://127.0.0.1:3232/v1/api/job --header "X-Auth-Token: $TOKEN" -X POST -d @$BATS_TMPDIR/job.json | tee $BATS_TMPDIR/job2.json)"
   [ "$J" != "" ]
 }
 
@@ -21,12 +28,14 @@
 }
 
 @test "Be able to retrieve the current status" {
-  SECRETID="$(cat $BATS_TMPDIR/secretid)"
+  TOKEN="$(cat $BATS_TMPDIR/token)"
+  echo "TOKEN: $TOKEN" >&2
+  # SECRETID="$(cat $BATS_TMPDIR/secretid)"
   J="$(cat $BATS_TMPDIR/job2.json)"
 
   ID=$(echo $J | jq ._id -r)
 
-  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
+  R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Auth-Token: $TOKEN")"
   echo "R:$R" >&2
   status=$(echo $R | jq .status -r)
 
@@ -34,7 +43,9 @@
 }
 
 @test "Status should eventually be success" {
-  SECRETID="$(cat $BATS_TMPDIR/secretid)"
+  TOKEN="$(cat $BATS_TMPDIR/token)"
+  echo "TOKEN: $TOKEN" >&2
+  # SECRETID="$(cat $BATS_TMPDIR/secretid)"
   J="$(cat $BATS_TMPDIR/job2.json)"
 
   ID=$(echo $J | jq ._id -r)
@@ -44,7 +55,7 @@
   for i in {1..40}
   do
     sleep 5
-    R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Secret-Token: $SECRETID")"
+    R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/$ID --header "X-Auth-Token: $TOKEN")"
     echo "R:$R" >&2
     status=$(echo $R | jq .status -r)
     if [ "$status" != "queued" -a "$status" != "running" ]
