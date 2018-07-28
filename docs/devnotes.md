@@ -5,21 +5,21 @@
 $ vagrant up
 $ vagrant ssh
 vagrant~$ go get github.com/gbevan/godo/cmd/godo
-vagrant~$ cd go/src/github.com/gbevan/goswim/
+vagrant~$ cd go/src/github.com/gbevan/gostint/
 vagrant~$ dep ensure
 vagrant~$ godo [--watch]
 ```
 in another terminal you can run the BATS tests:
 ```
 $ vagrant ssh
-vagrant~$ cd go/src/github.com/gbevan/goswim/
+vagrant~$ cd go/src/github.com/gbevan/gostint/
 vagrant~$ godo test
 ```
 
 #### Accessing mongodb in vagrant
 ```
-vagrant~$ mongo -u goswim_admin -p admin123 admin
-> use goswim
+vagrant~$ mongo -u gostint_admin -p admin123 admin
+> use gostint
 > db.queues.find()
 ```
 
@@ -41,20 +41,20 @@ token_policies       ["root"]
 identity_policies    []
 policies             ["root"]
 
-~$ vault read database/creds/goswim-dbauth-role
+~$ vault read database/creds/gostint-dbauth-role
 Key                Value
 ---                -----
-lease_id           database/creds/goswim-dbauth-role/9f12e958-a2e7-080e-e9df-b8842cb3f8ae
+lease_id           database/creds/gostint-dbauth-role/9f12e958-a2e7-080e-e9df-b8842cb3f8ae
 lease_duration     1h
 lease_renewable    true
 password           A1a-4bHwB9x6vd6irH51
-username           v-token-goswim-dbauth-role-g0YkRCwmxnbnTcFh0oQ8-1530388299
+username           v-token-gostint-dbauth-role-g0YkRCwmxnbnTcFh0oQ8-1530388299
 ```
 See [godo](Gododir/main.go) for dev testing the above.
 
-### Get a SecretId for the goswim-role for a request
+### Get a SecretId for the gostint-role for a request
 ```
-~$ vault write -f auth/approle/role/goswim-role/secret-id
+~$ vault write -f auth/approle/role/gostint-role/secret-id
 Key                   Value
 ---                   -----
 secret_id             1b3932e2-2e76-c2bf-f962-8115359a8b05
@@ -106,7 +106,7 @@ $ curl -k -s https://127.0.0.1:3232/v1/api/job/5b3f83d3559214025a198281 \
   "submitted": "2018-07-06T14:59:31.014Z",
   "started": "2018-07-06T14:59:31.817Z",
   "ended": "2018-07-06T14:59:34.266Z",
-  "output": "Hello World!\r\nHOSTNAME=7c487ca858ce\r\nSHLVL=1\r\nHOME=/root\r\nTERM=xterm\r\nPATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\r\nPWD=/\r\nPID   USER     TIME  COMMAND\r\n    1 root      0:00 {hello.sh} /bin/sh /goswim/hello.sh\r\n    8 root      0:00 ps -efl\r\n-r--r--r--    1 root     root           146 Jan  1  1970 \u001b[0;0m/secrets.yml\u001b[m\r\n\r\n/goswim:\r\ntotal 12\r\ndrwxr-xr-x    2 1000     1000          4096 Jul  5 14:09 \u001b[1;34m.\u001b[m\r\ndrwxr-xr-x   13 root     root          4096 Jul  6 14:59 \u001b[1;34m..\u001b[m\r\n-rwxr-xr-x    1 1000     1000           100 Jul  5 14:09 \u001b[1;32mhello.sh\u001b[m\r\n---\r\n# goswim vault secrets injected:\r\nTOKEN: c2eaebd4-cde3-8cda-1692-fe3647d48895\r\nfield_1: value1\r\nfield_2: value2\r\nfield_3: value3\r\nmysecret: s3cr3t\r\n",
+  "output": "Hello World!\r\nHOSTNAME=7c487ca858ce\r\nSHLVL=1\r\nHOME=/root\r\nTERM=xterm\r\nPATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\r\nPWD=/\r\nPID   USER     TIME  COMMAND\r\n    1 root      0:00 {hello.sh} /bin/sh /gostint/hello.sh\r\n    8 root      0:00 ps -efl\r\n-r--r--r--    1 root     root           146 Jan  1  1970 \u001b[0;0m/secrets.yml\u001b[m\r\n\r\n/gostint:\r\ntotal 12\r\ndrwxr-xr-x    2 1000     1000          4096 Jul  5 14:09 \u001b[1;34m.\u001b[m\r\ndrwxr-xr-x   13 root     root          4096 Jul  6 14:59 \u001b[1;34m..\u001b[m\r\n-rwxr-xr-x    1 1000     1000           100 Jul  5 14:09 \u001b[1;32mhello.sh\u001b[m\r\n---\r\n# gostint vault secrets injected:\r\nTOKEN: c2eaebd4-cde3-8cda-1692-fe3647d48895\r\nfield_1: value1\r\nfield_2: value2\r\nfield_3: value3\r\nmysecret: s3cr3t\r\n",
   "return_code": 0
 }
 ```
@@ -135,7 +135,7 @@ curl -k -s https://127.0.0.1:3232/v1/api/job/kill/5b4246f1e1c2cc22c776d734 \
   "status": "stopping"
 }
 
-goswim will attempt to first stop the container and will timeout after 15
+gostint will attempt to first stop the container and will timeout after 15
 seconds and then will kill it.
 ```
 
@@ -174,7 +174,7 @@ file into your script at runtime.
 ```
 
 # Releasing with goreleaser and docker
-Merges of PRs to goethite/goswim master will trigger `devel` builds of
+Merges of PRs to goethite/gostint master will trigger `devel` builds of
 the docker image automatically in DockerHub.
 
 Versioned releases:

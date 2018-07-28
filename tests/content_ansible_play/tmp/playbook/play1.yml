@@ -2,6 +2,6 @@
   tasks:
     - include_vars:
         file: /secrets.yml
-        name: goswim
+        name: gostint
 
-    - debug: var=goswim
+    - debug: var=gostint

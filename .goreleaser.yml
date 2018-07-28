@@ -1,7 +1,7 @@
 # This is an example goreleaser.yaml file with some sane defaults.
 # Make sure to check the documentation at http://goreleaser.com
 builds:
-  - binary: goswim
+  - binary: gostint
     goos:
       - linux
     goarch:
@@ -28,7 +28,7 @@ changelog:
 release:
   github:
     owner: goethite
-    name: goswim
+    name: gostint
   draft: false
   prerelease: true
   disable: false

@@ -1,4 +1,4 @@
-# goswim job states
+# gostint job states
 
 ```mermaid
 graph TD
@@ -8,7 +8,7 @@ graph TD
   running == job failed rc!=0 ==> failed[fa:fa-times failed];
   running == job completes rc=0 ==> success[fa:fa-check success];
   running == kill requested ==> stopping;
-  running == goswim node failed ==> unknown[fa:fa-question unknown];
+  running == gostint node failed ==> unknown[fa:fa-question unknown];
   stopping ==> failed;
 
   style queued fill:#8cf

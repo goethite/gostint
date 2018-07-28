@@ -36,13 +36,13 @@ wget -qO- https://dl.google.com/go/go${GOVER}.linux-amd64.tar.gz | \
 export PATH=$PATH:/usr/local/go/bin
 echo 'export PATH=$PATH:/usr/local/go/bin:~/go/bin' >> ~vagrant/.bashrc
 
-export MYPATH=~vagrant/go/src/github.com/gbevan/goswim
+export MYPATH=~vagrant/go/src/github.com/gbevan/gostint
 
 . $MYPATH/scripts/init_mongodb.sh
 . $MYPATH/scripts/init_vault.sh
 
 echo "Creating self signed cert"
-su - vagrant -c "echo -e 'GB\n\n\ngoswim\n\n$(hostname)\n\n' | openssl req  -nodes -new -x509  -keyout go/src/github.com/gbevan/goswim/etc/key.pem -out go/src/github.com/gbevan/goswim/etc/cert.pem -days 365 2>&1 && chmod 644 go/src/github.com/gbevan/goswim/etc/key.pem"
+su - vagrant -c "echo -e 'GB\n\n\ngostint\n\n$(hostname)\n\n' | openssl req  -nodes -new -x509  -keyout go/src/github.com/gbevan/gostint/etc/key.pem -out go/src/github.com/gbevan/gostint/etc/cert.pem -days 365 2>&1 && chmod 644 go/src/github.com/gbevan/gostint/etc/key.pem"
 
 # Ready!
 echo '========================================================='

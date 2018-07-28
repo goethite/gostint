@@ -1,6 +1,6 @@
 {
   "qname": "play job8",
-  "container_image": "goethite/goswim-kubectl:latest",
+  "container_image": "goethite/gostint-kubectl:latest",
   "content": "",
   "run": [
     "help"
