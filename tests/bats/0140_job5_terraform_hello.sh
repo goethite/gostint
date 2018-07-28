@@ -1,5 +1,11 @@
 #!/usr/bin/env bats
 
+# NOTE: the json content MUST be created using:
+#   tar zcvf ../content_terraform.tar.gz . --owner=2001 --group=2001
+#   base64 -w 0 ../content_terraform.tar.gz
+# terraform will need write access (UID 2001 is gostint user injected into the
+# container)
+
 @test "Submitting job5 terraform hello world should return json" {
   # Get a default token for the api post authentication
   TOKEN=$(vault write -f auth/token/create policies=default -format=json | jq .auth.client_token -r)
@@ -7,7 +13,7 @@
   echo "$TOKEN" > $BATS_TMPDIR/token
 
   # Get secretId for the approle
-  WRAPSECRETID=$(vault write -wrap-ttl=144h -f auth/approle/role/goswim-role/secret-id -format=json | jq .wrap_info.token -r)
+  WRAPSECRETID=$(vault write -wrap-ttl=144h -f auth/approle/role/gostint-role/secret-id -format=json | jq .wrap_info.token -r)
   echo "WRAPSECRETID: $WRAPSECRETID" >&2
 
   # cat ../job5_terraform.json | jq ".wrap_secret_id=\"$WRAPSECRETID\"" > $BATS_TMPDIR/job.json
@@ -16,7 +22,7 @@
 
   # encrypt job payload using vault transit secret engine
   B64=$(base64 < ../job5_terraform.json)
-  E=$(vault write transit/encrypt/goswim plaintext="$B64" -format=json | jq .data.ciphertext -r)
+  E=$(vault write transit/encrypt/gostint plaintext="$B64" -format=json | jq .data.ciphertext -r)
   echo "E: $E"
 
   # Put encrypted payload in a cubbyhole of an ephemeral token
@@ -63,11 +69,6 @@
   [ "$status" == "queued" -o "$status" == "running" ]
 }
 
-# NOTE: the json content MUST be created using:
-#   tar zcvf ../content_terraform.tar.gz . --owner=2001 --group=2001
-#   base64 -w 0 ../content_terraform.tar.gz
-# terraform will need write access (UID 2001 is goswim user injected into the
-# container)
 @test "Status should eventually be success" {
   TOKEN="$(cat $BATS_TMPDIR/token)"
   echo "TOKEN: $TOKEN" >&2

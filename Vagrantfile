@@ -1,7 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-extras = "~vagrant/go/src/github.com/gbevan/goswim/scripts/init_main.sh"
+extras = "~vagrant/go/src/github.com/gbevan/gostint/scripts/init_main.sh"
 
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|

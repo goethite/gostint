@@ -25,17 +25,17 @@ vault secrets enable database
 
 # Configure Vault's MongoDB Secret Engine for our DB instance
 # this requires privileged creds for the DB to allow Vault to issue ephemeral
-# creds to goswim.  It is recommended to rotate your privileged creds in production.
-vault write database/config/goswim-mongodb \
+# creds to gostint.  It is recommended to rotate your privileged creds in production.
+vault write database/config/gostint-mongodb \
   plugin_name=mongodb-database-plugin \
-  allowed_roles="goswim-dbauth-role" \
+  allowed_roles="gostint-dbauth-role" \
   connection_url="mongodb://{{username}}:{{password}}@127.0.0.1:27017/admin?ssl=false" \
   username="${MUSER}" \
   password="${MPWD}" && \
 
-vault write database/roles/goswim-dbauth-role \
-  db_name=goswim-mongodb \
-  creation_statements='{ "db": "goswim", "roles": [{ "role": "readWrite" }] }' \
+vault write database/roles/gostint-dbauth-role \
+  db_name=gostint-mongodb \
+  creation_statements='{ "db": "gostint", "roles": [{ "role": "readWrite" }] }' \
   default_ttl="10m" \
   max_ttl="24h"
 
@@ -44,45 +44,45 @@ echo '=== Create policy to access mongodb ====================='
 curl -s \
   --request POST \
   --header 'X-Vault-Token: root' \
-  --data '{"policy": "path \"database/creds/goswim-dbauth-role\" {\n  capabilities = [\"read\"]\n}"}' \
-  ${VAULT_ADDR}/v1/sys/policy/goswim-mongodb-auth
+  --data '{"policy": "path \"database/creds/gostint-dbauth-role\" {\n  capabilities = [\"read\"]\n}"}' \
+  ${VAULT_ADDR}/v1/sys/policy/gostint-mongodb-auth
 
 echo '=== Enable transit plugin ==============================='
 vault secrets enable transit
 
-echo '=== Create goswim instance transit keyring =============='
-vault write -f transit/keys/goswim
+echo '=== Create gostint instance transit keyring =============='
+vault write -f transit/keys/gostint
 
 # Enable Vault AppRole
 echo '=== enable AppRole auth ================================='
 vault auth enable approle
 
 # Create policy to access kv secrets for approle
-echo '=== Create policy to access kv for goswim-role =========='
+echo '=== Create policy to access kv for gostint-role =========='
 curl -s \
   --request POST \
   --header 'X-Vault-Token: root' \
   --data '{"policy": "path \"secret/*\" {\n  capabilities = [\"read\"]\n}"}' \
-  ${VAULT_ADDR}/v1/sys/policy/goswim-approle-kv
+  ${VAULT_ADDR}/v1/sys/policy/gostint-approle-kv
 
-# Create policy to access transit decrypt goswim for approle
-echo '=== Create policy to access transit decrypt goswim for goswim-role =========='
+# Create policy to access transit decrypt gostint for approle
+echo '=== Create policy to access transit decrypt gostint for gostint-role =========='
 curl -s \
   --request POST \
   --header 'X-Vault-Token: root' \
-  --data '{"policy": "path \"transit/decrypt/goswim\" {\n  capabilities = [\"update\"]\n}"}' \
-  ${VAULT_ADDR}/v1/sys/policy/goswim-approle-transit-decrypt-goswim
+  --data '{"policy": "path \"transit/decrypt/gostint\" {\n  capabilities = [\"update\"]\n}"}' \
+  ${VAULT_ADDR}/v1/sys/policy/gostint-approle-transit-decrypt-gostint
 
-# Create named role for goswim
-echo '=== Create approle role for goswim ======================'
-vault write auth/approle/role/goswim-role \
+# Create named role for gostint
+echo '=== Create approle role for gostint ======================'
+vault write auth/approle/role/gostint-role \
   secret_id_ttl=24h \
   secret_id_num_uses=10000 \
   token_num_uses=10 \
   token_ttl=20m \
   token_max_ttl=30m \
-  policies="goswim-approle-kv,goswim-approle-transit-decrypt-goswim"
+  policies="gostint-approle-kv,gostint-approle-transit-decrypt-gostint"
 
-# Get RoleID for goswim
-export GOSWIM_ROLEID=`vault read -format=yaml -field=data auth/approle/role/goswim-role/role-id | awk '{print $2;}'`
-echo "export GOSWIM_ROLEID=$GOSWIM_ROLEID" | tee -a .bashrc
+# Get RoleID for gostint
+export GOSTINT_ROLEID=`vault read -format=yaml -field=data auth/approle/role/gostint-role/role-id | awk '{print $2;}'`
+echo "export GOSTINT_ROLEID=$GOSTINT_ROLEID" | tee -a .bashrc

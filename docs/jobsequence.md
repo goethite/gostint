@@ -5,39 +5,39 @@ Note: to view the sequence diagrams use the Atom editor with the atom-mermaid  p
 sequenceDiagram
   participant requestor as trusted requestor / poster
   participant od as deployment orchestrator
-  participant goswim
+  participant gostint
   participant vault
   participant queues
   participant docker
 
-  od->>vault: create AppRole for goswim
-  od->>goswim: deploys with Vault AppRoleID
+  od->>vault: create AppRole for gostint
+  od->>gostint: deploys with Vault AppRoleID
   requestor->>vault: authenticates (token, own approle, etc...)
   %% vault-->>vault: grants
   requestor->>vault: requests secretId for AppRole
   vault-->>requestor: secretID
 
-  requestor->>goswim: POST job with secretId
+  requestor->>gostint: POST job with secretId
 
-  goswim->>vault: authenticate poster (approle: secretId)
-  vault-->>goswim: token (discarded/revoked)
-  goswim->>queues: push to a queue
+  gostint->>vault: authenticate poster (approle: secretId)
+  vault-->>gostint: token (discarded/revoked)
+  gostint->>queues: push to a queue
 
-  goswim-->>goswim: process queues
+  gostint-->>gostint: process queues
 
-  queues->>goswim: pop next from a queue
-  goswim->>vault: authenticate requestor (approle: secretId)
-  vault-->>goswim: token
-  goswim->>vault: get requested secrets for job
-  goswim->>docker: runs requested job with secrets from vault
-  docker-->>goswim: job completes
-  goswim->>queues: job status/results are saved
-  goswim->>vault: revoke token
+  queues->>gostint: pop next from a queue
+  gostint->>vault: authenticate requestor (approle: secretId)
+  vault-->>gostint: token
+  gostint->>vault: get requested secrets for job
+  gostint->>docker: runs requested job with secrets from vault
+  docker-->>gostint: job completes
+  gostint->>queues: job status/results are saved
+  gostint->>vault: revoke token
 
-  requestor->>goswim: polls for results
-  goswim->>queues: get job results
-  queues-->>goswim: return job results
-  goswim-->>requestor: return job results
+  requestor->>gostint: polls for results
+  gostint->>queues: get job results
+  queues-->>gostint: return job results
+  gostint-->>requestor: return job results
 ```
 * Requestor and poster here are the same enitity.
 
@@ -47,45 +47,45 @@ sequenceDiagram
   participant requestor
   participant poster
   participant o as orchestrator e.g. kubernetes
-  participant goswim
+  participant gostint
   participant vault
   participant queues
   participant docker
 
-  o->>goswim: deploys with Vault AppRoleID
+  o->>gostint: deploys with Vault AppRoleID
   requestor->>vault: requests secretId[1] for AppRole
   vault-->>requestor: secretID[1]
   requestor->>poster: submit job to run with secretId[1]
 
   poster->>vault: requests secretId[1] for AppRole
   vault-->>poster: secretID[2]
-  poster->>goswim: POST job with secretId[2]
+  poster->>gostint: POST job with secretId[2]
 
-  goswim->>vault: authenticate poster (approle: secretId[2])
-  vault-->>goswim: token[2] (discarded/revoked)
-  goswim->>queues: push to a queue
+  gostint->>vault: authenticate poster (approle: secretId[2])
+  vault-->>gostint: token[2] (discarded/revoked)
+  gostint->>queues: push to a queue
 
-  goswim-->>goswim: process queues
+  gostint-->>gostint: process queues
 
-  queues->>goswim: pop next from a queue
-  goswim->>vault: authenticate requestor (approle: secretId[1])
-  vault-->>goswim: token[1]
-  goswim->>vault: get requested secrets for job
-  goswim->>docker: runs requested job with secrets from vault
-  docker-->>goswim: job completes
-  goswim->>queues: job status/results are saved
-  goswim->>vault: revoke token[1]
+  queues->>gostint: pop next from a queue
+  gostint->>vault: authenticate requestor (approle: secretId[1])
+  vault-->>gostint: token[1]
+  gostint->>vault: get requested secrets for job
+  gostint->>docker: runs requested job with secrets from vault
+  docker-->>gostint: job completes
+  gostint->>queues: job status/results are saved
+  gostint->>vault: revoke token[1]
 
   requestor->>poster: polls for results
-  poster->>goswim: get results for job
-  goswim->>queues: get job results
-  queues-->>goswim: return job results
-  goswim-->>poster: return job results
+  poster->>gostint: get results for job
+  gostint->>queues: get job results
+  queues-->>gostint: return job results
+  gostint-->>poster: return job results
   poster-->>requestor: return job results
 ```
 * This two step authentication of requestor and poster allows for an intermediary
 api routing "middleware" - in future this will be leveraged to support the
-requestor posting the job details into a Vault "Cubbyhole" for goswim to pickup,
+requestor posting the job details into a Vault "Cubbyhole" for gostint to pickup,
 thereby removing the risk of a man-in-the-middle-attack.
 
 This diagram below includes the cubbyhole interactions:
@@ -94,7 +94,7 @@ sequenceDiagram
   participant requestor
   participant poster as poster / routing
   participant o as orchestrator e.g. kubernetes
-  participant goswim
+  participant gostint
   participant queues
   participant vault
   participant docker
@@ -104,43 +104,43 @@ sequenceDiagram
   %% with the vault (assuming using their own AppRoles, with appropriate
   %% policies).
 
-  %% goswim deployment
-  o->>goswim: deploys with Vault AppRoleID
-  o->>requestor: onboard AppRole and url/path to goswim
+  %% gostint deployment
+  o->>gostint: deploys with Vault AppRoleID
+  o->>requestor: onboard AppRole and url/path to gostint
 
-  %% requestor consumes goswim as an automation service
+  %% requestor consumes gostint as an automation service
   requestor->>vault: request wrapped secretID for AppRole
   requestor->>vault: send base64 json (inc wrapped SecretID) to a cubbyhole?
   vault-->>requestor: wrapped response to cubbyhole token (use-limit=1, ttl=24h)?
   requestor->>poster: submit job request w/wrap token to cubbyhole & qname
 
-  poster->>goswim: authenticate(own AppRole/token?) and POST job request
+  poster->>gostint: authenticate(own AppRole/token?) and POST job request
 
-  goswim->>queues: push job to a queue
-  goswim->>goswim: processing queues
+  gostint->>queues: push job to a queue
+  gostint->>gostint: processing queues
 
-  queues->>goswim: pop next from a queue
-  goswim->>vault: retrieve cubbyhole and conv job to json
-  goswim->>vault: authenticate job request (approle: secretID)
-  vault-->>goswim: token
-  goswim->>vault: get requested secrets for job
-  goswim->>docker: runs requested job with secrets injected
-  docker-->>goswim: job completes
-  goswim->>queues: job status/results are saved
-  goswim->>vault: revoke token
+  queues->>gostint: pop next from a queue
+  gostint->>vault: retrieve cubbyhole and conv job to json
+  gostint->>vault: authenticate job request (approle: secretID)
+  vault-->>gostint: token
+  gostint->>vault: get requested secrets for job
+  gostint->>docker: runs requested job with secrets injected
+  docker-->>gostint: job completes
+  gostint->>queues: job status/results are saved
+  gostint->>vault: revoke token
 
   requestor->>poster: polls for results
-  poster->>goswim: get results for job
-  goswim->>queues: get job results
-  queues-->>goswim: return job results
-  goswim-->>poster: return job results
+  poster->>gostint: get results for job
+  gostint->>queues: get job results
+  queues-->>gostint: return job results
+  gostint-->>poster: return job results
   poster-->>requestor: return job results
 ```
 Policy notes:
 * poster must not be able to interact with cubbyholes at all.
 
 Notes:
-Creating a cubbyhole for goswim to consume
+Creating a cubbyhole for gostint to consume
 ```
 $ vault login root
 
@@ -183,14 +183,14 @@ sequenceDiagram
   participant requestor
   participant poster as poster / routing
   %% participant o as orchestrator e.g. kubernetes
-  participant goswim
+  participant gostint
   participant queues
   participant vault
   participant docker
 
   %% build job to submit
   requestor->>vault: (authenticates with)
-  requestor->>vault: request wrapped SecretID for AppRole(goswim)
+  requestor->>vault: request wrapped SecretID for AppRole(gostint)
   vault-->>requestor: wrapped SecretID (token)
   requestor->>vault: request a default token ttl=10m use-limit=2
   vault-->>requestor: a default token
@@ -206,38 +206,38 @@ sequenceDiagram
   %% SecretID wrapping token can nolonger be used - this state can be detected
   %% and alerted as a MITM attack.
 
-  poster->>goswim: (authenticates with)
-  poster->>goswim: fwd POST job request
+  poster->>gostint: (authenticates with)
+  poster->>gostint: fwd POST job request
 
   %% extract job from cubbyhole
-  goswim->>vault: retrieve cubbyhole from path using default token (last use)
-  vault-->>goswim: job request from cubbyhole
+  gostint->>vault: retrieve cubbyhole from path using default token (last use)
+  vault-->>gostint: job request from cubbyhole
 
-  goswim->>queues: Queues the job request
-  goswim-->>poster: job queued response
+  gostint->>queues: Queues the job request
+  gostint-->>poster: job queued response
   poster-->>requestor: job queued response
 
-  goswim-->>goswim: sometime later
+  gostint-->>gostint: sometime later
 
-  queues->>goswim: job is popped from the queue
-  goswim->>vault: unwrap wrapped SecretID
-  vault-->>goswim: SecretID
-  goswim->>vault: authenticate with RoleID+SecretID
-  vault-->>goswim: token (with appropriate policies for automation)
-  %% this token is used by goswim going fwd and passed to running job
-  goswim->>vault: retrieve secrets at refs from job request
-  vault-->>goswim: secrets
+  queues->>gostint: job is popped from the queue
+  gostint->>vault: unwrap wrapped SecretID
+  vault-->>gostint: SecretID
+  gostint->>vault: authenticate with RoleID+SecretID
+  vault-->>gostint: token (with appropriate policies for automation)
+  %% this token is used by gostint going fwd and passed to running job
+  gostint->>vault: retrieve secrets at refs from job request
+  vault-->>gostint: secrets
 
-  goswim->>docker: run job request with injected secrets...
-  docker-->>goswim: return results
-  goswim->>queues: save results
-  goswim->>vault: revoke approle token (drop job privs)
+  gostint->>docker: run job request with injected secrets...
+  docker-->>gostint: return results
+  gostint->>queues: save results
+  gostint->>vault: revoke approle token (drop job privs)
 
   requestor->>poster: poll for results
-  poster->>goswim: poll for results
-  goswim->> queues: retrieve results
-  queues-->>goswim: results
-  goswim-->>poster: results
+  poster->>gostint: poll for results
+  gostint->> queues: retrieve results
+  queues-->>gostint: results
+  gostint-->>poster: results
   poster-->>requestor: results
 
   requestor-->>requestor: loop polls until success/failed/notauthorised/unknown
@@ -257,17 +257,17 @@ sequenceDiagram
   participant requestor
   participant poster as poster / routing
   %% participant o as orchestrator e.g. kubernetes
-  participant goswim
+  participant gostint
   participant queues
   participant vault as vault transit / e2e
   participant docker
 
   %% Enrolement
-  goswim->>vault: Enroles its RSA Public key
+  gostint->>vault: Enroles its RSA Public key
 
   %% build job to submit
   requestor->>vault: (authenticates with)
-  requestor->>vault: request wrapped SecretID for AppRole(goswim)
+  requestor->>vault: request wrapped SecretID for AppRole(gostint)
   vault-->>requestor: wrapped SecretID (token)
 
   requestor->>vault: request e2e&#xb9; encryption of job payload (inc wrapped SecretID)
@@ -282,49 +282,49 @@ sequenceDiagram
 
   %% This time, even if the poster is hacked and intercepts the POST request,
   %% and using the default token to retrieve the cubbyhole, the data returned
-  %% is encrypted, such that only goswim's RSA Private Key can decrypt it.
+  %% is encrypted, such that only gostint's RSA Private Key can decrypt it.
   %% This tampering of the request can be detected to raise an alert of the
   %% MITM attack.
 
-  poster->>goswim: (authenticates with)
-  poster->>goswim: fwd POST job request
+  poster->>gostint: (authenticates with)
+  poster->>gostint: fwd POST job request
 
   %% extract job from cubbyhole
-  goswim->>vault: retrieve cubbyhole from path using default token (last use)
-  vault-->>goswim: job request from cubbyhole
+  gostint->>vault: retrieve cubbyhole from path using default token (last use)
+  vault-->>gostint: job request from cubbyhole
 
   %% we can decrypt here or at point of job execution, in this example we will
   %% leave the payload encrypted until it is needed for the job to run.
 
-  goswim->>queues: Queues the (still encrypted) job request
-  goswim-->>poster: job queued response
+  gostint->>queues: Queues the (still encrypted) job request
+  gostint-->>poster: job queued response
   poster-->>requestor: job queued response
 
-  goswim-->>goswim: sometime later
+  gostint-->>gostint: sometime later
 
-  queues->>goswim: job is popped from the queue
+  queues->>gostint: job is popped from the queue
 
   % Decrypt
-  goswim->>goswim: decrypt payload with RSA private key
+  gostint->>gostint: decrypt payload with RSA private key
 
-  goswim->>vault: unwrap wrapped SecretID (from payload)
-  vault-->>goswim: SecretID
-  goswim->>vault: authenticate with RoleID+SecretID
-  vault-->>goswim: token (with appropriate policies for automation)
-  %% this token is used by goswim going fwd and passed to running job
-  goswim->>vault: retrieve secrets at refs&#xb2; from job request
-  vault-->>goswim: secrets
+  gostint->>vault: unwrap wrapped SecretID (from payload)
+  vault-->>gostint: SecretID
+  gostint->>vault: authenticate with RoleID+SecretID
+  vault-->>gostint: token (with appropriate policies for automation)
+  %% this token is used by gostint going fwd and passed to running job
+  gostint->>vault: retrieve secrets at refs&#xb2; from job request
+  vault-->>gostint: secrets
 
-  goswim->>docker: run job request with injected secrets...
-  docker-->>goswim: return results
-  goswim->>queues: save results
-  goswim->>vault: revoke approle token (drop job privs)
+  gostint->>docker: run job request with injected secrets...
+  docker-->>gostint: return results
+  gostint->>queues: save results
+  gostint->>vault: revoke approle token (drop job privs)
 
   requestor->>poster: poll for results
-  poster->>goswim: poll for results
-  goswim->> queues: retrieve results
-  queues-->>goswim: results
-  goswim-->>poster: results&#xb3;
+  poster->>gostint: poll for results
+  gostint->> queues: retrieve results
+  queues-->>gostint: results
+  gostint-->>poster: results&#xb3;
   poster-->>requestor: results
 
   requestor-->>requestor: loop polls until success/failed/notauthorised/unknown
@@ -332,7 +332,7 @@ sequenceDiagram
 ```
 [&#xb9;] e2e - this can be a multi-step process leveraging the Vault's Transit
 secret engine (e.g. create a random key, encrypt payload using AES256GCM, then
-encrypt the key using RSA2048 with goswim's RSA public key), or possibly use
+encrypt the key using RSA2048 with gostint's RSA public key), or possibly use
 my PoC [vault-e2e-plugin](https://github.com/gbevan/vault-e2e-plugin) for Vault.
 
 [&#xb2;] Secret Refs could have already been resolved by the [vault-e2e-plugin](https://github.com/gbevan/vault-e2e-plugin), if used - this
@@ -353,21 +353,21 @@ sequenceDiagram
   participant requestor
   participant poster as poster / routing
   participant o as orchestrator e.g. kubernetes
-  participant goswim
+  participant gostint
   participant queues
   participant vault as vault transit / e2e
   participant docker
 
   %% Enrolement
   o->>vault: Onboards requestor
-  o->>vault: Onboards goswim's transit keyring, policies, etc...
+  o->>vault: Onboards gostint's transit keyring, policies, etc...
   %% requestor can only encrypt.
-  %% goswim can also decrypt.
+  %% gostint can also decrypt.
   %% poster, if even in vault at all, has no permissions here.
 
   %% build job to submit
   requestor->>vault: (authenticates with)
-  requestor->>vault: request wrapped SecretID for AppRole(goswim)
+  requestor->>vault: request wrapped SecretID for AppRole(gostint)
   vault-->>requestor: wrapped SecretID (token)
 
   requestor->>vault: request transit keyring to encrypt job payload
@@ -384,54 +384,54 @@ sequenceDiagram
 
   %% This time, even if the poster is hacked and intercepts the POST request,
   %% and using the default token to retrieve the cubbyhole, the data returned
-  %% is encrypted, such that only goswim's transit keyring can decrypt it.
+  %% is encrypted, such that only gostint's transit keyring can decrypt it.
   %% This tampering of the request can be detected to raise an alert of the
   %% MITM attack.
 
-  poster->>goswim: (authenticates with)
-  poster->>goswim: fwd POST job request
+  poster->>gostint: (authenticates with)
+  poster->>gostint: fwd POST job request
 
   %% extract job from cubbyhole
-  goswim->>vault: retrieve cubbyhole from path using default token (last use)
-  vault-->>goswim: (still encrypted) job request from cubbyhole
+  gostint->>vault: retrieve cubbyhole from path using default token (last use)
+  vault-->>gostint: (still encrypted) job request from cubbyhole
 
   %% we can decrypt here or at point of job execution, in this example we will
   %% leave the payload encrypted until it is needed for the job to run.
 
-  goswim->>queues: Queues the (still encrypted) job request
+  gostint->>queues: Queues the (still encrypted) job request
   %% Note; the wrapped SecretID is not encrypted
-  goswim-->>poster: job queued response
+  gostint-->>poster: job queued response
   poster-->>requestor: job queued response
 
-  goswim-->>goswim: sometime later
+  gostint-->>gostint: sometime later
 
-  queues->>goswim: job is popped from the queue
+  queues->>gostint: job is popped from the queue
 
   %% authenticate
-  goswim->>vault: unwrap wrapped SecretID
-  vault-->>goswim: SecretID
-  goswim->>vault: authenticate with RoleID+SecretID
-  vault-->>goswim: token (with appropriate policies for automation)
-  %% this token is used by goswim going fwd and passed to running job
+  gostint->>vault: unwrap wrapped SecretID
+  vault-->>gostint: SecretID
+  gostint->>vault: authenticate with RoleID+SecretID
+  vault-->>gostint: token (with appropriate policies for automation)
+  %% this token is used by gostint going fwd and passed to running job
 
   %% Decrypt
-  %% goswim->>goswim: decrypt payload with RSA private key
-  goswim->>vault: request decrypt of job using keyring
-  vault-->>goswim: plaintext base64 encoded job request payload
+  %% gostint->>gostint: decrypt payload with RSA private key
+  gostint->>vault: request decrypt of job using keyring
+  vault-->>gostint: plaintext base64 encoded job request payload
 
-  goswim->>vault: retrieve secrets at refs from job request
-  vault-->>goswim: secrets
+  gostint->>vault: retrieve secrets at refs from job request
+  vault-->>gostint: secrets
 
-  goswim->>docker: run job request with injected secrets...
-  docker-->>goswim: return results
-  goswim->>queues: save results
-  goswim->>vault: revoke approle token (drop job privs)
+  gostint->>docker: run job request with injected secrets...
+  docker-->>gostint: return results
+  gostint->>queues: save results
+  gostint->>vault: revoke approle token (drop job privs)
 
   requestor->>poster: poll for results
-  poster->>goswim: poll for results
-  goswim->> queues: retrieve results
-  queues-->>goswim: results
-  goswim-->>poster: results&#xb3;
+  poster->>gostint: poll for results
+  gostint->> queues: retrieve results
+  queues-->>gostint: results
+  gostint-->>poster: results&#xb3;
   poster-->>requestor: results
 
   requestor-->>requestor: loop polls until success/failed/notauthorised/unknown

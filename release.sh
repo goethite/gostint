@@ -44,10 +44,10 @@ fi
 
 echo "Logging in to dockerhub"
 docker login || exit 2
-echo "Building goethite/goswim:$TAG image"
-docker build -t goethite/goswim:$TAG . || exit 2
-echo "Pushing goethite/goswim:$TAG to dockerhub"
-docker push goethite/goswim:$TAG || exit 2
+echo "Building goethite/gostint:$TAG image"
+docker build -t goethite/gostint:$TAG . || exit 2
+echo "Pushing goethite/gostint:$TAG to dockerhub"
+docker push goethite/gostint:$TAG || exit 2
 
 echo "Tagging master as $TAG"
 git tag -a $TAG -m "$COMMENT"

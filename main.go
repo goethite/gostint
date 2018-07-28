@@ -1,20 +1,20 @@
 /*
 Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
 
-This file is part of goswim.
+This file is part of gostint.
 
-goswim is free software: you can redistribute it and/or modify
+gostint is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-goswim is distributed in the hope that it will be useful,
+gostint is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with goswim.  If not, see <https://www.gnu.org/licenses/>.
+along with gostint.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 package main
@@ -27,9 +27,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/gbevan/goswim/jobqueues"
-	"github.com/gbevan/goswim/pingclean"
-	"github.com/gbevan/goswim/v1/job"
+	"github.com/gbevan/gostint/jobqueues"
+	"github.com/gbevan/gostint/pingclean"
+	"github.com/gbevan/gostint/v1/job"
 	"github.com/globalsign/mgo"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -39,7 +39,7 @@ import (
 
 // MongoDB session and db
 var dbSession *mgo.Session
-var goswimDb *mgo.Database
+var gostintDb *mgo.Database
 
 var appRoleID string
 
@@ -48,9 +48,9 @@ func GetDbSession() *mgo.Session {
 	return dbSession
 }
 
-// GetDb returns the goswim Db
+// GetDb returns the gostint Db
 func GetDb() *mgo.Database {
-	return goswimDb
+	return gostintDb
 }
 
 func GetAppRoleID() string {
@@ -70,11 +70,11 @@ func getDbCreds() (string, string, error) {
 	}
 
 	// Authenticate with Vault using passed one-time token
-	client.SetToken(os.Getenv("GOSWIM_DBAUTH_TOKEN"))
-	os.Setenv("GOSWIM_DBAUTH_TOKEN", "")
+	client.SetToken(os.Getenv("GOSTINT_DBAUTH_TOKEN"))
+	os.Setenv("GOSTINT_DBAUTH_TOKEN", "")
 
 	// Get MongoDB ephemeral credentials
-	secretValues, err := client.Logical().Read("database/creds/goswim-dbauth-role")
+	secretValues, err := client.Logical().Read("database/creds/gostint-dbauth-role")
 	if err != nil {
 		return "", "", err
 	}
@@ -215,34 +215,34 @@ func Routes() *chi.Mux {
 
 func main() {
 
-	log.Println("Starting goswim service")
+	log.Println("Starting gostint service")
 
 	username, password, err := getDbCreds()
 	if err != nil {
 		panic(err)
 	}
 	log.Println("Dialing Mongodb")
-	dbSession, err = mgo.Dial(os.Getenv("GOSWIM_DBURL"))
+	dbSession, err = mgo.Dial(os.Getenv("GOSTINT_DBURL"))
 	if err != nil {
 		panic(err)
 	}
-	log.Println("Logging in to goswim db")
-	goswimDb = dbSession.DB("goswim")
-	err = goswimDb.Login(username, password)
+	log.Println("Logging in to gostint db")
+	gostintDb = dbSession.DB("gostint")
+	err = gostintDb.Login(username, password)
 	if err != nil {
 		panic(err)
 	}
 
 	// init ping and clean
-	nodeUuid := pingclean.Init(goswimDb)
+	nodeUuid := pingclean.Init(gostintDb)
 
-	appRoleID = os.Getenv("GOSWIM_ROLEID")
+	appRoleID = os.Getenv("GOSTINT_ROLEID")
 
 	// Create RESTful routes
 	router := Routes()
 
 	// Start job queues
-	jobqueues.Init(goswimDb, appRoleID, nodeUuid)
+	jobqueues.Init(gostintDb, appRoleID, nodeUuid)
 
 	// TODO: make non TLS an option from command line parameters
 	// log.Fatal(http.ListenAndServe(":3232", router))
@@ -251,8 +251,8 @@ func main() {
 	// log.Fatal(http.ListenAndServeTLS(":3232", "etc/cert.pem", "etc/key.pem", router))
 	log.Fatal(http.ListenAndServeTLS(
 		":3232",
-		os.Getenv("GOSWIM_SSL_CERT"),
-		os.Getenv("GOSWIM_SSL_KEY"),
+		os.Getenv("GOSTINT_SSL_CERT"),
+		os.Getenv("GOSTINT_SSL_KEY"),
 		router,
 	))
 }

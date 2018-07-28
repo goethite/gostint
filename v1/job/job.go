@@ -1,20 +1,20 @@
 /*
 Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
 
-This file is part of goswim.
+This file is part of gostint.
 
-goswim is free software: you can redistribute it and/or modify
+gostint is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-goswim is distributed in the hope that it will be useful,
+gostint is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with goswim.  If not, see <https://www.gnu.org/licenses/>.
+along with gostint.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 package job
@@ -28,7 +28,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gbevan/goswim/jobqueues"
+	"github.com/gbevan/gostint/jobqueues"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/go-chi/chi"
@@ -296,7 +296,7 @@ func killJob(w http.ResponseWriter, req *http.Request) {
 	// }
 
 	// flag job to be killed - we cant do this directly here because this
-	// instance of goswim may not be the same one that is running the job
+	// instance of gostint may not be the same one that is running the job
 
 	job.UpdateJob(bson.M{
 		// "status":         "stopping",

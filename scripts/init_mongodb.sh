@@ -8,7 +8,7 @@ apt-get install -y mongodb-org
 
 mongod --config /etc/mongod.conf --fork --smallfiles --auth --bind_ip 0.0.0.0
 
-# Wait for MongoDB to become available and config goswim root/admin user
+# Wait for MongoDB to become available and config gostint root/admin user
 (
   echo "=== Waiting for MongoDB"
   until mongo --host=127.0.0.1:27017 --eval 'print("waited for connection")'; do
@@ -17,6 +17,6 @@ mongod --config /etc/mongod.conf --fork --smallfiles --auth --bind_ip 0.0.0.0
   echo "=== Passed MongoDB"
 )
 echo '=== Set mongodb root admin pw for dev'
-MUSER='goswim_admin'
+MUSER='gostint_admin'
 MPWD='admin123'
 mongo admin --eval "db.createUser({user: '${MUSER}', pwd: '${MPWD}', roles: [{role: 'root', db: 'admin'}]})"

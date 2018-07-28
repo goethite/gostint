@@ -21,21 +21,21 @@ func tasks(p *do.Project) {
     `)
 	})
 
-	// this step gets a one-time (2 uses) token to allow goswim to get an
+	// this step gets a one-time (2 uses) token to allow gostint to get an
 	// ephemeral user/password pair to authenticate with MongoDB
 	p.Task("gettoken", do.S{"mocksecrets"}, func(c *do.Context) {
 		token = c.BashOutput(`
     curl -s \
       --request POST \
       --header 'X-Vault-Token: root' \
-      --data '{"policies": ["goswim-mongodb-auth"], "ttl": "10m", "num_uses": 2}' \
+      --data '{"policies": ["gostint-mongodb-auth"], "ttl": "10m", "num_uses": 2}' \
       ${VAULT_ADDR}/v1/auth/token/create | jq .auth.client_token -r
     `)
 		token = strings.Trim(token, " \t\n")
 	})
 
 	p.Task("default", do.S{"gettoken"}, func(c *do.Context) {
-		c.Start(`GOSWIM_SSL_CERT=etc/cert.pem GOSWIM_SSL_KEY=etc/key.pem GOSWIM_DBAUTH_TOKEN={{.token}} GOSWIM_DBURL=127.0.0.1:27017 main.go`, do.M{"token": token})
+		c.Start(`GOSTINT_SSL_CERT=etc/cert.pem GOSTINT_SSL_KEY=etc/key.pem GOSTINT_DBAUTH_TOKEN={{.token}} GOSTINT_DBURL=127.0.0.1:27017 main.go`, do.M{"token": token})
 	}).Src("**/*.go")
 
 	// To be run alongside default to drive BATS tests against the instance

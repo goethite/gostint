@@ -1,20 +1,20 @@
 /*
 Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
 
-This file is part of goswim.
+This file is part of gostint.
 
-goswim is free software: you can redistribute it and/or modify
+gostint is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 
-goswim is distributed in the hope that it will be useful,
+gostint is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with goswim.  If not, see <https://www.gnu.org/licenses/>.
+along with gostint.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 package jobqueues
@@ -38,7 +38,7 @@ import (
 	client "docker.io/go-docker"
 	"docker.io/go-docker/api/types"
 	"docker.io/go-docker/api/types/container"
-	"github.com/gbevan/goswim/approle"
+	"github.com/gbevan/gostint/approle"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/hashicorp/vault/api"
@@ -46,8 +46,8 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-const goswimUID = 2001
-const goswimGID = 2001
+const gostintUID = 2001
+const gostintGID = 2001
 
 var debug = Debug("jobqueues")
 
@@ -67,7 +67,7 @@ var jobQueues JobQueues
 // Job structure to represent a job submission request
 type Job struct {
 	ID       bson.ObjectId `json:"_id"               bson:"_id,omitempty"`
-	NodeUUID string        `json:"node_uuid"         bson:"node_uuid" description:"goswim node's unique identifier"`
+	NodeUUID string        `json:"node_uuid"         bson:"node_uuid" description:"gostint node's unique identifier"`
 
 	// These fields are passed from requestor in POSTed request:
 	Qname        string `    json:"qname"             bson:"qname"`
@@ -267,7 +267,7 @@ func (job *Job) runRequest() {
 	}()
 
 	// Decrypt the payload and merge into jobRequest
-	resp, err := client.Logical().Write("transit/decrypt/goswim", map[string]interface{}{
+	resp, err := client.Logical().Write("transit/decrypt/gostint", map[string]interface{}{
 		"ciphertext": job.Payload,
 	})
 	if err != nil {
@@ -387,7 +387,7 @@ func (job *Job) runRequest() {
 			})
 			return
 		}
-		yamlHdr := []byte("---\n# goswim vault secrets injected:\n")
+		yamlHdr := []byte("---\n# gostint vault secrets injected:\n")
 		secretsYAML = append(yamlHdr, secretsYAML...)
 
 		entries = []TarEntry{
@@ -468,7 +468,7 @@ func (job *Job) runRequest() {
 			return
 		}
 
-		// Look for goswim.yml in content
+		// Look for gostint.yml in content
 		// fmt.Printf("tar data: %v", string(data))
 		meta := Meta{}
 		tempRdr, err := gzip.NewReader(strings.NewReader(string(data)))
@@ -476,7 +476,7 @@ func (job *Job) runRequest() {
 			job.UpdateJob(bson.M{
 				"status": "failed",
 				"ended":  time.Now(),
-				"output": fmt.Sprintf("Failed to unzip content to rdr for goswim.yaml: %s", err),
+				"output": fmt.Sprintf("Failed to unzip content to rdr for gostint.yaml: %s", err),
 			})
 			return
 		}
@@ -495,25 +495,25 @@ func (job *Job) runRequest() {
 				})
 				return
 			}
-			if hdr.Name == "./goswim.yml" {
+			if hdr.Name == "./gostint.yml" {
 				if _, err = io.Copy(&bufMeta, tr); err != nil {
 					job.UpdateJob(bson.M{
 						"status": "failed",
 						"ended":  time.Now(),
-						"output": fmt.Sprintf("Failed extracting goswim.yml from tar: %s", err),
+						"output": fmt.Sprintf("Failed extracting gostint.yml from tar: %s", err),
 					})
 					return
 				}
 			}
 
 			// fmt.Printf("bufMeta: %s\n", bufMeta.Bytes())
-			// parse goswim.yml
+			// parse gostint.yml
 			err := yaml.Unmarshal(bufMeta.Bytes(), &meta)
 			if err != nil {
 				job.UpdateJob(bson.M{
 					"status": "failed",
 					"ended":  time.Now(),
-					"output": fmt.Sprintf("Failed parsing yaml in goswim.yml: %s", err),
+					"output": fmt.Sprintf("Failed parsing yaml in gostint.yml: %s", err),
 				})
 				return
 			}
@@ -544,7 +544,7 @@ func (job *Job) runRequest() {
 	}
 }
 
-// Meta defines the format of the goswim.yml file
+// Meta defines the format of the gostint.yml file
 type Meta struct {
 	ContainerImage string `yaml:"container_image"`
 }
@@ -609,7 +609,7 @@ func (job *Job) runContainer() error {
 		// Cmd:   []string{"echo", "hello world"},
 		Cmd:  job.Run,
 		Tty:  true,
-		User: fmt.Sprintf("%d:%d", goswimUID, goswimGID),
+		User: fmt.Sprintf("%d:%d", gostintUID, gostintGID),
 	}
 
 	if len(job.EntryPoint) != 0 {
@@ -664,7 +664,7 @@ func (job *Job) runContainer() error {
 		return err
 	}
 
-	err = addUser(cli, ctx, resp.ID, "goswim", goswimUID, goswimGID, "/tmp")
+	err = addUser(cli, ctx, resp.ID, "gostint", gostintUID, gostintGID, "/tmp")
 	if err != nil {
 		return err
 	}
@@ -748,7 +748,7 @@ func addUser(cli *client.Client, ctx context.Context, containerID, name string, 
 	// log.Printf("bufMeta: %v", bufMeta.String())
 	passwd := bufMeta.String()
 
-	// add goswim user
+	// add gostint user
 	passwd = fmt.Sprintf("%s%s:x:%d:%d:%s:%s:/bin/sh\n", passwd, name, uid, gid, name, home)
 
 	entries := []TarEntry{

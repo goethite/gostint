@@ -1,13 +1,13 @@
 {
   "qname": "play job5",
-  "content": "targz,H4sIAEbgSFsAA+3X3W6CMBQHcK55isp2DW0pNDHZ/d5gl6ZiQZJCTSkui/Hd1+owLtmiF4L7OL8b0DZpk+P/tMZJMDrs8Czzz5RTcv4cBCRNKWZpmjI/L3cfA5SNv7Ug6DsrDEJTLPUTxUmlu9e6GfNncH39aYYJdt9zRnOo/xRO9de93fS2i2158zV8gXPGvq9/xj7qzxjleYAJySgNEL75Tr7wz+t/LDuKKiOljdAuRGgrVC/RE4oed1th4sPIPgr34b33Cm7vlP9G1O0Y4Q8u559QPvR/zjF1+ceccMj/FIzsdG8KiSKlC6EWZa1khKJS62MzQKjQrZWt9a++KbiRWXQY8FNb0RxaRWKbTeKG4qUw0Cp+kVP+XauvxVLJEW4AF8///Oz+l3F//nOGIf9TGMr+6QawkqXolfXBfpZKafSijVrNINh/z5D/+K1RY61x8fxPj/mnJOPY//8n2L1B/qfw4I93d/WTZlE3opJztBbdui602SRWGiNKbZq5qqu1Da+aimNCYg59AgAAAAAAAAAAAAAAAO7sHdyEGXEAKAAA",
+  "content": "targz,H4sIADyoXFsAA+3X3WqDMBQHcK99ijTbtSYxGijsfm+wy5LaaIVoSoyFUfrui5WuHWy0F+q+zu8mxQgJHP8naRQHkyOeSNN+TASj1+NZQJOECUqTNOX+eUYTEaB0+q0FQdc6aRGaY6mfKIpL07qqcRN+B/fWn3CWEkr8c5H5Aeo/g0v9Ted2nWsjV4y9Rl/gjPOv6+8zP9SfcyaygFAqCA8QGXsjn/nn9R+qjnBplXIYHUKE9lJ3Cj0h/HjYSxudZo44PIbfvVcwvkv+a1k1E4Q/uJ1/ysS5/wtBWJ9/Sijkfw5WtaazuUJYm1zqVVFphREujBmaAUK5aZxqXP+zbwp+ZoFPE/2rjaxPrSJ29S72U9FaWmgVv8gl/77XV3Kt1fg3gJvnf3Z1/0uFzz+jjEH+53Cu+ocbwEYVstOuD/az0tqgF2P1ZgHB/nve8x+91nqiNW6e/8mQf0ZTf+/3/xMpSTic/7N46I93f/NTdlXVslRLtJXttsqN3cVOWSsLY+ulrsqtC+96lUSURgL6BAAAAAAAAAAAAAAAAHyzN8qpPJ4AKAAA",
   "entrypoint": [
     "sh", "-c"
   ],
   "run": [
     "terraform init && terraform plan && terraform apply -auto-approve"
   ],
-  "working_directory": "/goswim",
+  "working_directory": "/gostint",
   "secret_refs": [
     "mysecret@secret/data/my-secret.my-value",
     "field_1@secret/data/my-form.field1",
