@@ -1,0 +1,10 @@
+{
+  "qname": "hello_world",
+  "container_image": "busybox",
+  "content": "",
+  "run": [
+    "sh", "-c", "echo 'Hello World!'"
+  ],
+  "secret_refs": [
+  ]
+}

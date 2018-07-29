@@ -7,3 +7,11 @@ main:
     url: "https://github.com/goethite/gostint"
   - title: "DockerHub"
     url: "https://hub.docker.com/r/goethite/gostint/"
+
+docs:
+  - title: Getting Started
+    children:
+      - title: Getting Started with GoStint
+        url: "/docs/0100_Getting_Started/"
+      - title: Runing a Job
+        url: "/docs/0110_Running_A_Job/"

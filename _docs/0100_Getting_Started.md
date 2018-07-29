@@ -35,7 +35,8 @@ classes: wide
   2018/07/29 15:37:39 Logging in to gostint db
   ```
   The gostint server is now running with it's api accessible at
-  https://127.0.0.1:3232
+  https://127.0.0.1:3232 (also the vault ui/api is exposed at
+  https://127.0.0.1:8300)
 
 * In another vagrant ssh window, you can run the BATs api tests:
   ```
