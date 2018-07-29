@@ -25,7 +25,7 @@ title_separator          : "|"
 name                     : "Graham Bevan"
 description              : "A Shallow RESTful api for container based automation."
 url                      : "https://goethite.github.io/gostint/"
-baseurl                  : "/gostint"
+baseurl                  : ""
 repository               : "goethite/gostint"
 teaser                   : # path of fallback teaser image, e.g. "/assets/images/500x300.png"
 # breadcrumbs            : false # true, false (default)
@@ -104,10 +104,10 @@ analytics:
 
 # Site Author
 author:
-  name             : "Your Name"
+  name             : "Graham Lee Bevan"
   avatar           : # path of avatar image, e.g. "/assets/images/bio-photo.jpg"
-  bio              : "I am an amazing person."
-  location         : "Somewhere"
+  bio              : "Developer, architect and technologist."
+  location         : "UK"
   email            :
   uri              :
   home             : # null (default), "absolute or relative url to link to author home"
@@ -117,8 +117,8 @@ author:
   flickr           :
   facebook         :
   foursquare       :
-  github           :
-  gitlab           :
+  github           : https://github.com/gbevan
+  gitlab           : https://gitlab.com/gbevan
   google_plus      :
   keybase          :
   instagram        :
