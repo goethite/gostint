@@ -1,6 +1,7 @@
 ---
 title: Getting Started with GoStint
 classes: wide
+toc: true
 ---
 ## Getting started with a Vagrant Development Environment
 * Prereqs:
