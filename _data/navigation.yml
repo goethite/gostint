@@ -2,7 +2,7 @@ main:
   # - title: "About"
   #   url: "/about/"
   - title: "Docs"
-    url: "/docs/"
+    url: "/docs/0100_Getting_Started/"
   - title: "GitHub"
     url: "https://github.com/goethite/gostint"
   - title: "DockerHub"
