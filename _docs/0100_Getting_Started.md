@@ -8,21 +8,21 @@ classes: wide
   * Vagrant
 * Clone this project.
 * Start up the vagrant docker instance:
-  ```
+  ```bash
   gostint $ vagrant up
   ```
 * SSH into the Vagrant instance:
-  ```
+  ```bash
   gostint $ vagrant ssh
   vagrant@23e208f27e53:~$
   ```
 * Change to the gostint src folder mapped into the container:
-  ```
+  ```bash
   vagrant@23e208f27e53:~$ cd go/src/github.com/gbevan/gostint
   vagrant@23e208f27e53:~/go/src/github.com/gbevan/gostint$
   ```
 * Start gostint using `godo`:
-  ```
+  ```bash
   vagrant@23e208f27e53:~/go/src/github.com/gbevan/gostint$ godo
   ```
   (optional parameter `--watch` will restart if changes are detected)
@@ -39,7 +39,7 @@ classes: wide
   https://127.0.0.1:8300)
 
 * In another vagrant ssh window, you can run the BATs api tests:
-  ```
+  ```bash
   gostint $ vagrant ssh
   vagrant@23e208f27e53:~$ cd go/src/github.com/gbevan/gostint
   vagrant@23e208f27e53:~$ godo test
@@ -58,7 +58,7 @@ each of the components would be configured for High Availability and Scalability
 * Start a MongoDB docker service - see the official
   [mongo](https://hub.docker.com/_/mongo/) image.
   Configure:
-  ```
+  ```bash
   mongo admin --eval "db.createUser({user: 'your_db_user', pwd: 'your_db_password', roles: [{role: 'root', db: 'admin'}]})"
   ```
 * Start a Hashicorp Vault service - if deploying to a real production
@@ -66,7 +66,7 @@ each of the components would be configured for High Availability and Scalability
   guide, esp around hardening recommendations - for now you can use the official
   [vault](https://hub.docker.com/_/vault/) docker image.
   Configure vault for gostint:
-  ```
+  ```bash
   export VAULT_ADDR="https://your_vault_host:8200"
   vault login your_root_token
   vault secrets enable database
@@ -128,7 +128,7 @@ each of the components would be configured for High Availability and Scalability
   This will need a `deployment_token_from_vault` issued from a privileged persona
   to allow this deployment to setup the required policies etc (dont forget to revoke
   tokens once you are finished with them).
-  ```
+  ```bash
   export VAULT_ADDR="https://your_vault_host:8200"
 
   # Request a MongoDB secret engine token for gostint to request an ephemeral
