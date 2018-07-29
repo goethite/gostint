@@ -3,3 +3,7 @@ main:
   #   url: "/about/"
   - title: "Docs"
     url: "/docs/"
+  - title: "GitHub"
+    url: "https://github.com/goethite/gostint"
+  - title: "DockerHub"
+    url: "https://hub.docker.com/r/goethite/gostint/"
