@@ -26,6 +26,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/gbevan/gostint/jobqueues"
 	"github.com/gbevan/gostint/pingclean"
@@ -118,46 +119,6 @@ func ErrInvalidRequest(err error) render.Renderer {
 	}
 }
 
-/*
- * was in PoC - authenticating poster with secret-id, but poster should have its
- * own way to generate a token to authenticate with, e.g. its own AppRole.
-func authenticate(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := r.Header["X-Secret-Token"]; !ok {
-			log.Println("Missing X-Secret-Token")
-			render.Render(w, r, ErrInvalidRequest(errors.New("Missing X-Secret-Token")))
-			return
-		}
-		secretID := r.Header["X-Secret-Token"][0]
-		unusedToken, client, err := approle.Authenticate(appRoleID, secretID)
-		if err != nil {
-			log.Printf("Authentication Failure with AppRole: %v", err)
-			render.Render(w, r, ErrInvalidRequest(err))
-			return
-		}
-		client.SetToken(unusedToken)
-
-		// Verify the token is good
-		tokDetails, err := client.Logical().Read("auth/token/lookup-self")
-		if err != nil {
-			log.Printf("Authentication Failure with Token: %v", err)
-			render.Render(w, r, ErrInvalidRequest(err))
-			return
-		}
-		log.Printf("tokDetails: %v", tokDetails)
-
-		// Revoke the unused token
-		_, err = client.Logical().Write("auth/token/revoke-self", nil)
-		if err != nil {
-			log.Printf("Error: revoking token after job completed: %s", err)
-		}
-
-		ctx := context.WithValue(r.Context(), "authenticated", true)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-*/
-
 func authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, ok := r.Header["X-Auth-Token"]; !ok {
@@ -215,7 +176,15 @@ func Routes() *chi.Mux {
 
 func main() {
 
-	log.Println("Starting gostint service")
+	server_port := 3232
+	if os.Getenv("GOSTINT_PORT") != "" {
+		sp, err := strconv.Atoi(os.Getenv("GOSTINT_PORT"))
+		if err != nil {
+			panic(err)
+		}
+		server_port = sp
+	}
+	log.Printf("Starting gostint...")
 
 	username, password, err := getDbCreds()
 	if err != nil {
@@ -234,7 +203,7 @@ func main() {
 	}
 
 	// init ping and clean
-	nodeUuid := pingclean.Init(gostintDb)
+	nodeUUID := pingclean.Init(gostintDb)
 
 	appRoleID = os.Getenv("GOSTINT_ROLEID")
 
@@ -242,15 +211,16 @@ func main() {
 	router := Routes()
 
 	// Start job queues
-	jobqueues.Init(gostintDb, appRoleID, nodeUuid)
+	jobqueues.Init(gostintDb, appRoleID, nodeUUID)
 
 	// TODO: make non TLS an option from command line parameters
 	// log.Fatal(http.ListenAndServe(":3232", router))
 
 	// TODO: parameterise cert & key from command line
 	// log.Fatal(http.ListenAndServeTLS(":3232", "etc/cert.pem", "etc/key.pem", router))
+	log.Printf("gostint listening on https port %d", server_port)
 	log.Fatal(http.ListenAndServeTLS(
-		":3232",
+		fmt.Sprintf(":%d", server_port),
 		os.Getenv("GOSTINT_SSL_CERT"),
 		os.Getenv("GOSTINT_SSL_KEY"),
 		router,
