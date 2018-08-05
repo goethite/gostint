@@ -15,6 +15,9 @@ docs:
         url: "/docs/0100_Getting_Started/"
       - title: Runing a Job
         url: "/docs/0110_Running_A_Job/"
+      - title: Use Cases
+        url: "/docs/0200_usecases/"
+
 
   - title: API
     children:
