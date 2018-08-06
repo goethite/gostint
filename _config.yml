@@ -213,10 +213,10 @@ plugins:
   - jekyll-gist
   - jekyll-feed
   - jemoji
-  - jekyll-mermaid
+  # - jekyll-mermaid
 
-mermaid:
-  src: /gostint/assets/js/mermaid.js
+# mermaid:
+#   src: /gostint/assets/js/mermaid.js
 
 # mimic GitHub Pages with --safe
 whitelist:
