@@ -1,7 +1,7 @@
 #!/bin/sh -xe
 
 # sudo dockerd --pidfile /tmp/docker.pid -H unix:///var/lib/gostint/docker.sock &
-sudo sh -c 'dockerd -s vfs 2>&1 | grep -v "level=info" &'
+sudo sh -c '(dockerd -s vfs 2>&1 | grep -v "level=info") &'
 
 # drop sudo privs
 sudo mv /etc/sudoers /etc/sudoers.DISABLED
