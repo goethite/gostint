@@ -35,7 +35,8 @@ RUN \
 
 ##############################################
 # Exe stage
-FROM alpine
+# FROM alpine
+FROM alpine:3.3
 
 COPY --from=builder /go/src/github.com/gbevan/gostint/gostint /usr/bin
 
