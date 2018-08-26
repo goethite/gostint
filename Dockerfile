@@ -45,7 +45,7 @@ COPY start-image.sh .
 
 # apk add --no-cache docker jq curl openssl sudo && \
 RUN \
-  apk add --no-cache bind-tools docker sudo && \
+  apk add --no-cache docker sudo && \
   adduser -S -D -H -G docker -h /app gostint && \
   mkdir -p /var/lib/gostint && \
   chown gostint /var/lib/gostint && \
