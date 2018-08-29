@@ -1,5 +1,5 @@
 ---
-title: Runing a Job
+title: Runing a Job - the hard way
 classes: wide
 toc: true
 ---
@@ -20,6 +20,3 @@ is running Vault in dev mode, hence the login token of '`root`'):
 {% highlight bash %}
 {% include_relative scripts/hello_world/run.sh %}
 {% endhighlight %}
-
-TODO: rework above script to use just `curl` instead of mixing with the
-Vault cli - this will be better for client API consumers to understand.
