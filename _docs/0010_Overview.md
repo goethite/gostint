@@ -53,12 +53,31 @@ for each job. Here are some examples:
 Basically anything that can be run as a job in a container can be securely driven
 by the GoStint API.
 
+### Jobs in Queues
+GoStint serialises consecutive jobs in queues (using `qname`). Queues are entirely
+arbitrary and you can use them in whatever way suits your purposes.
+The default queue is "".
+
+Note: There is currently no limit to how many jobs can run in parallel (if you
+let them) - other than the resource limitations of the host, of course.
+
+### Layering Content
+The `-content=folder/` option allows for additional content to be layered on top
+of the docker container, prior to running it.  The layer is unpacked in to the
+container routed at "`/`".
+
+### Injecting Secrets from Vault
+The `-secret-refs=["variable_name@secret/data/mysecrets.myvalue1", ...]` allows for variables
+to be set from paths in the Vault.  These are inject at the point the job's docker
+container is instantiated and placed in the container either as `/secrets.yaml` or
+`/secrets.json`  (depending on `-secret-filetype`).
+
 ### A Helm Chart for Kubernetes
 A [proof-of-concept] [Helm Chart](https://github.com/goethite/gostint-helm)
 is available to deploy GoSting, Vault with etcd
 backend, and MongoDB - as a self-contained automation API.
 
-Note: The job gostint pods are currently run in "privileged" mode to enable
+Note: The gostint pods are currently run in "privileged" mode to enable
 support for docker-in-docker running of the containerised jobs.
 
 ### Project Status
