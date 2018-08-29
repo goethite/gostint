@@ -59,3 +59,8 @@ backend, and MongoDB - as a self-contained automation API.
 
 Note: The job gostint pods are currently run in "privileged" mode to enable
 support for docker-in-docker running of the containerised jobs.
+
+### Project Status
+It is early days for this project and it is still considered a proof-of-concept,
+and would certainly not recommend for production at this stage.
+More work needs to be done around reviewing and securing the api protocols.
