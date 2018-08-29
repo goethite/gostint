@@ -68,9 +68,9 @@ container routed at "`/`".
 
 ### Injecting Secrets from Vault
 The `-secret-refs=["variable_name@secret/data/mysecrets.myvalue1", ...]` allows for variables
-to be set from paths in the Vault.  These are inject at the point the job's docker
+to be set from paths in the Vault.  These are injected at the moment the job's docker
 container is instantiated and placed in the container either as `/secrets.yaml` or
-`/secrets.json`  (depending on `-secret-filetype`).
+`/secrets.json`  (depending on `-secret-filetype` - default is `yaml`).
 
 ### A Helm Chart for Kubernetes
 A [proof-of-concept] [Helm Chart](https://github.com/goethite/gostint-helm)
