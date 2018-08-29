@@ -1,5 +1,5 @@
 ---
-title: Runing a Job - the hard way
+title: Running a Job - the hard way
 classes: wide
 toc: true
 ---

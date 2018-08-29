@@ -15,9 +15,9 @@ docs:
         url: "/docs/0010_Overview/"
       - title: Getting Started with GoStint
         url: "/docs/0100_Getting_Started/"
-      - title: Runing a Job - the hard way
+      - title: Running a Job - the hard way
         url: "/docs/0110_Running_A_Job/"
-      - title: Runing a Job - the easy way with gostint-client
+      - title: Running a Job - the easy way with gostint-client
         url: "/docs/0120_Running_A_Job_client/"
       - title: Use Cases
         url: "/docs/0200_usecases/"

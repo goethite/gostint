@@ -29,13 +29,13 @@ Submitting a job to GoStint involves:
 6. Polling the status of the job until complete.
 
 An example script performing the above steps can be seen
-[Runing a Job - the hard way]({{ site.baseurl }}{% link _docs/0110_Running_A_Job.md %}).
+[Running a Job - the hard way]({{ site.baseurl }}{% link _docs/0110_Running_A_Job.md %}).
 
 However, to make things easier, a sister project called
 [gostint-client](https://github.com/goethite/gostint-client)
 is available providing a command-line tool that does all of the above steps
 for you. See
-[Runing a Job - the easy way with gostint-client]({{ site.baseurl }}{% link _docs/0120_Running_A_Job_client.md).
+[Running a Job - the easy way with gostint-client]({{ site.baseurl }}{% link _docs/0120_Running_A_Job_client.md).
 
 ### Jobs as Containers
 Running jobs in containers allows the exact versioned environment to be (re)used

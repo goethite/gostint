@@ -1,5 +1,5 @@
 ---
-title: Runing a Job - the easy way with gostint-client
+title: Running a Job - the easy way with gostint-client
 classes: wide
 toc: true
 ---
@@ -58,7 +58,7 @@ $ gostint-client -vault-token=@.vault_token \
   -image=alpine \
   -run='["cat", "/etc/os-release"]' \
   -debug
-  
+
 2018-08-28T13:11:23+01:00 Validating command line arguments
 2018-08-28T13:11:23+01:00 Resolving file argument @.vault_token
 2018-08-28T13:11:23+01:00 Building Job Request
