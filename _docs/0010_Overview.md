@@ -35,7 +35,7 @@ However, to make things easier, a sister project called
 [gostint-client](https://github.com/goethite/gostint-client)
 is available providing a command-line tool that does all of the above steps
 for you. See
-[Running a Job - the easy way with gostint-client]({{ site.baseurl }}{% link _docs/0120_Running_A_Job_client.md).
+[Running a Job - the easy way with gostint-client]({{ site.baseurl }}{% link _docs/0120_Running_A_Job_client.md %}).
 
 ### Jobs as Containers
 Running jobs in containers allows the exact versioned environment to be (re)used
