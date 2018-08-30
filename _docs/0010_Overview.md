@@ -69,18 +69,19 @@ container routed at "`/`".
 ### Injecting Secrets from Vault
 The `-secret-refs=["variable_name@secret/data/mysecrets.myvalue1", ...]` allows for variables
 to be set from paths in the Vault.  These are injected at the moment the job's docker
-container is instantiated and placed in the container either as `/secrets.yaml` or
+container is instantiated and placed in the container either as `/secrets.yml` or
 `/secrets.json`  (depending on `-secret-filetype` - default is `yaml`).
 
 ### A Helm Chart for Kubernetes
 A [proof-of-concept] [Helm Chart](https://github.com/goethite/gostint-helm)
-is available to deploy GoSting, Vault with etcd
+is available to deploy GoStint, Vault with etcd
 backend, and MongoDB - as a self-contained automation API.
 
-Note: The gostint pods are currently run in "privileged" mode to enable
+Note: The gostint pods are run in "privileged" mode to enable
 support for docker-in-docker running of the containerised jobs.
 
 ### Project Status
 It is early days for this project and it is still considered a proof-of-concept,
-and would certainly not recommend for production at this stage.
-More work needs to be done around reviewing and securing the api protocols.
+as such I would certainly not recommend it for production at this stage.
+More work needs to be done around reviewing and securing the api protocols,
+especially around the AppRoles' policies.
