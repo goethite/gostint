@@ -178,7 +178,7 @@ Get the Role_Id for the AppRole:
 ```
 vault read /auth/approle/role/gostint-client-role/role-id
 ```
-For this example we will use PUSH mode on the AppRole (not the secret_id was a
+For this example we will use PUSH mode on the AppRole (note the secret_id was a
 random uuid) - you would probably prefer to use PULL mode in production:
 ```
 vault write auth/approle/role/gostint-client-role/custom-secret-id \

@@ -48,10 +48,10 @@ toc: true
   ```
 The Vagrant container starts up the dev instance of MongodDB and Vault automatically.
 
-## Simple Production Deployment
+## Simple "Production" Deployment
 Note: this is a work-in-progress...
 
-This example is to demo a very simply prod deployment.  Ideally in production
+This example is to demo a very simple prod deployment.  Ideally in production
 each of the components would be configured for High Availability and Scalability.
 
 ![Simple Prod](../diagrams/prod_simple.png)
