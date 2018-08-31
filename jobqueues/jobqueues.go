@@ -395,6 +395,15 @@ func (job *Job) runRequest() {
 				return
 			}
 
+			if secretValues == nil {
+				job.UpdateJob(bson.M{
+					"status": "failed",
+					"ended":  time.Now(),
+					"output": fmt.Sprintf("Failed to retrieve secret %s from vault: response is nil", secPath),
+				})
+				return
+			}
+
 			if !job.ContOnWarnings && len(secretValues.Warnings) > 0 {
 				job.UpdateJob(bson.M{
 					"status": "failed",
