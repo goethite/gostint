@@ -385,7 +385,8 @@ func (job *Job) runRequest() {
 		secretValues := cache[secPath]
 		if secretValues == nil {
 			secretValues, err = client.Logical().Read(secPath)
-			if err != nil || secretValues == nil || secretValues.Data["data"] == nil {
+
+			if err != nil {
 				job.UpdateJob(bson.M{
 					"status": "failed",
 					"ended":  time.Now(),
@@ -405,7 +406,20 @@ func (job *Job) runRequest() {
 
 			cache[secPath] = secretValues
 		}
-		secVal := (secretValues.Data["data"].(map[string]interface{}))[secKey]
+		var data interface{}
+		if secretValues.Data["data"] != nil { // kv v2
+			data = secretValues.Data["data"]
+		} else if secretValues.Data != nil { // kv v1
+			data = secretValues.Data
+		} else {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("No data returned from vault path %s.%s", secPath, secKey),
+			})
+			return
+		}
+		secVal := (data.(map[string]interface{}))[secKey]
 		if secVal == nil {
 			job.UpdateJob(bson.M{
 				"status": "failed",
@@ -414,7 +428,7 @@ func (job *Job) runRequest() {
 			})
 			return
 		}
-		secrets[secVarName] = (secretValues.Data["data"].(map[string]interface{}))[secKey].(string)
+		secrets[secVarName] = (data.(map[string]interface{}))[secKey].(string)
 	} // for SecretRefs
 
 	// Create tar rdr for /secrets.yml|json in container
