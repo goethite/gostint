@@ -344,6 +344,14 @@ func (job *Job) runRequest() {
 	cache := map[string]*api.Secret{}
 	for _, v := range job.SecretRefs {
 		parts := secRefRe.FindStringSubmatch(v)
+		if len(parts) < 3 {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("Secretref is unparseable: %s", v),
+			})
+			return
+		}
 		secVarName := parts[1]
 		secPath := parts[2]
 		secKey := parts[3]
