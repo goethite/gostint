@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 # Install and start Vault server in dev mode
-wget -qO /tmp/vault.zip https://releases.hashicorp.com/vault/0.10.3/vault_0.10.3_linux_amd64.zip && \
+wget -qO /tmp/vault.zip https://releases.hashicorp.com/vault/0.10.4/vault_0.10.4_linux_amd64.zip && \
    ( cd /usr/local/bin && unzip /tmp/vault.zip )
 rm /tmp/vault.zip
 vault -autocomplete-install

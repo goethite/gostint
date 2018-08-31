@@ -385,11 +385,11 @@ func (job *Job) runRequest() {
 		secretValues := cache[secPath]
 		if secretValues == nil {
 			secretValues, err = client.Logical().Read(secPath)
-			if err != nil || secretValues == nil {
+			if err != nil || secretValues == nil || secretValues.Data["data"] == nil {
 				job.UpdateJob(bson.M{
 					"status": "failed",
 					"ended":  time.Now(),
-					"output": fmt.Sprintf("Failed to retrieve secret %s from vault", secPath),
+					"output": fmt.Sprintf("Failed to retrieve secret %s from vault err: %v", secPath, err),
 				})
 				return
 			}
@@ -405,10 +405,6 @@ func (job *Job) runRequest() {
 
 			cache[secPath] = secretValues
 		}
-		log.Printf("data: %v", secretValues.Data["data"])
-		log.Printf("secKey: %v", secKey)
-		log.Printf("secVarName: %v", secVarName)
-		log.Printf("@secKey: %v", (secretValues.Data["data"].(map[string]interface{}))[secKey])
 		secVal := (secretValues.Data["data"].(map[string]interface{}))[secKey]
 		if secVal == nil {
 			job.UpdateJob(bson.M{
