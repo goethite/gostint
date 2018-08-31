@@ -18,6 +18,7 @@ export VAULT_ADDR=http://127.0.0.1:8200
 
 # Login to vault and configure
 echo '=== Logging in to vault =================================='
+sleep 5
 vault login root
 
 echo '=== Enable MongoDB secret engine ========================='
