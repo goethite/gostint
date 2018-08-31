@@ -344,19 +344,52 @@ func (job *Job) runRequest() {
 	cache := map[string]*api.Secret{}
 	for _, v := range job.SecretRefs {
 		parts := secRefRe.FindStringSubmatch(v)
+		if len(parts) < 3 {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("Secretref is unparseable: %s", v),
+			})
+			return
+		}
 		secVarName := parts[1]
 		secPath := parts[2]
 		secKey := parts[3]
+
+		if secVarName == "" {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("Target variable name in secretref cannot be empty"),
+			})
+			return
+		}
+		if secPath == "" {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("Secretref must have a path"),
+			})
+			return
+		}
+		if secKey == "" {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("Secretref must have a path.key"),
+			})
+			return
+		}
 
 		// var secretValues api.Secret
 		secretValues := cache[secPath]
 		if secretValues == nil {
 			secretValues, err = client.Logical().Read(secPath)
-			if err != nil {
+			if err != nil || secretValues == nil {
 				job.UpdateJob(bson.M{
 					"status": "failed",
 					"ended":  time.Now(),
-					"output": fmt.Sprintf("Failed to retrieve secret %s from vault: %s", secPath, err),
+					"output": fmt.Sprintf("Failed to retrieve secret %s from vault", secPath),
 				})
 				return
 			}
@@ -372,14 +405,27 @@ func (job *Job) runRequest() {
 
 			cache[secPath] = secretValues
 		}
+		log.Printf("data: %v", secretValues.Data["data"])
+		log.Printf("secKey: %v", secKey)
+		log.Printf("secVarName: %v", secVarName)
+		log.Printf("@secKey: %v", (secretValues.Data["data"].(map[string]interface{}))[secKey])
+		secVal := (secretValues.Data["data"].(map[string]interface{}))[secKey]
+		if secVal == nil {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("Failed retrieving from vault path %s.%s", secPath, secKey),
+			})
+			return
+		}
 		secrets[secVarName] = (secretValues.Data["data"].(map[string]interface{}))[secKey].(string)
-	}
+	} // for SecretRefs
 
 	// Create tar rdr for /secrets.yml|json in container
 	var entries []TarEntry
 	if job.SecretFileType == "yaml" {
-		secretsYAML, err := yaml.Marshal(secrets)
-		if err != nil {
+		secretsYAML, err2 := yaml.Marshal(secrets)
+		if err2 != nil {
 			job.UpdateJob(bson.M{
 				"status": "failed",
 				"ended":  time.Now(),
