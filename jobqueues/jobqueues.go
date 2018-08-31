@@ -405,10 +405,6 @@ func (job *Job) runRequest() {
 
 			cache[secPath] = secretValues
 		}
-		log.Printf("data: %v", secretValues.Data["data"])
-		log.Printf("secKey: %v", secKey)
-		log.Printf("secVarName: %v", secVarName)
-		log.Printf("@secKey: %v", (secretValues.Data["data"].(map[string]interface{}))[secKey])
 		secVal := (secretValues.Data["data"].(map[string]interface{}))[secKey]
 		if secVal == nil {
 			job.UpdateJob(bson.M{
