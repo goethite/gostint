@@ -671,7 +671,6 @@ func (job *Job) runContainer() error {
 		log.Printf("Image %s already pulled, age: %d", job.ContainerImage, imgAgeDays)
 	}
 
-	log.Printf("EnvVars: %v", job.EnvVars)
 	cfg := container.Config{
 		Image: job.ContainerImage,
 		// Cmd:   []string{"echo", "hello world"},
