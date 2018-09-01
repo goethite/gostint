@@ -7,9 +7,9 @@
     "play1.yml"
   ],
   "secret_refs": [
-    "mysecret@secret/data/my-secret.my-value",
-    "field_1@secret/data/my-form.field1",
-    "field_2@secret/data/my-form.field2",
-    "field_3@secret/data/my-form.field3"
+    "mysecret@secret/my-secret.my-value",
+    "field_1@secret/my-form.field1",
+    "field_2@secret/my-form.field2",
+    "field_3@secret/my-form.field3"
   ]
 }

@@ -1,7 +1,9 @@
 #!/bin/bash -e
 
+VAULTVER=0.11.0
+
 # Install and start Vault server in dev mode
-wget -qO /tmp/vault.zip https://releases.hashicorp.com/vault/0.10.4/vault_0.10.4_linux_amd64.zip && \
+wget -qO /tmp/vault.zip https://releases.hashicorp.com/vault/${VAULTVER}/vault_${VAULTVER}_linux_amd64.zip && \
    ( cd /usr/local/bin && unzip /tmp/vault.zip )
 rm /tmp/vault.zip
 vault -autocomplete-install
@@ -20,6 +22,10 @@ export VAULT_ADDR=http://127.0.0.1:8200
 echo '=== Logging in to vault =================================='
 sleep 5
 vault login root
+
+echo '=== Mocking production mounts of secret engines =========='
+vault secrets move secret/ kv/  # v2 at /kv
+vault secrets enable -path=secret/ -version=1 kv
 
 echo '=== Enable MongoDB secret engine ========================='
 vault secrets enable database
@@ -59,12 +65,19 @@ echo '=== enable AppRole auth ================================='
 vault auth enable approle
 
 # Create policy to access kv secrets for approle
-echo '=== Create policy to access kv for gostint-role =========='
+echo '=== Create policy to access secret/ v1 for gostint-role ='
 curl -s \
   --request POST \
   --header 'X-Vault-Token: root' \
   --data '{"policy": "path \"secret/*\" {\n  capabilities = [\"read\"]\n}"}' \
-  ${VAULT_ADDR}/v1/sys/policy/gostint-approle-kv
+  ${VAULT_ADDR}/v1/sys/policy/gostint-approle-secret-v1
+
+echo '=== Create policy to access kv/ v2 for gostint-role =========='
+curl -s \
+  --request POST \
+  --header 'X-Vault-Token: root' \
+  --data '{"policy": "path \"kv/*\" {\n  capabilities = [\"read\"]\n}"}' \
+  ${VAULT_ADDR}/v1/sys/policy/gostint-approle-kv-v2
 
 # Create policy to access transit decrypt gostint for approle
 echo '=== Create policy to access transit decrypt gostint for gostint-role =========='
@@ -82,7 +95,7 @@ vault write auth/approle/role/gostint-role \
   token_num_uses=10 \
   token_ttl=20m \
   token_max_ttl=30m \
-  policies="gostint-approle-kv,gostint-approle-transit-decrypt-gostint"
+  policies="gostint-approle-secret-v1,gostint-approle-kv-v2,gostint-approle-transit-decrypt-gostint"
 
 # Get RoleID for gostint
 export GOSTINT_ROLEID=`vault read -format=yaml -field=data auth/approle/role/gostint-role/role-id | awk '{print $2;}'`
