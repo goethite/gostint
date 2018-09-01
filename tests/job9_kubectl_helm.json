@@ -2,9 +2,7 @@
   "qname": "play job9",
   "container_image": "goethite/gostint-kubectl:latest",
   "content": "",
-  "entrypoint": [
-    "/usr/local/bin/helm"
-  ],
+  "env_vars": ["RUNCMD=/usr/local/bin/helm"],
   "run": [
     "help"
   ],

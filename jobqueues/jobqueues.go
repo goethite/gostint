@@ -84,6 +84,7 @@ type Job struct {
 	EntryPoint     []string `json:"entrypoint"        bson:"entrypoint"`
 	Run            []string `json:"run"               bson:"run"`
 	WorkingDir     string   `json:"working_directory" bson:"working_directory"`
+	EnvVars        []string `json:"env_vars"          bson:"env_vars"`
 	SecretRefs     []string `json:"secret_refs"       bson:"secret_refs"`
 	SecretFileType string   `json:"secret_file_type"  bson:"secret_file_type"`
 	ContOnWarnings bool     `json:"cont_on_warnings"  bson:"cont_on_warnings"`
@@ -245,7 +246,7 @@ func (job *Job) runRequest() {
 		return
 	}
 
-	token, client, err := approle.Authenticate(jobQueues.AppRoleID, job.WrapSecretID)
+	token, vclient, err := approle.Authenticate(jobQueues.AppRoleID, job.WrapSecretID)
 	if err != nil {
 		job.UpdateJob(bson.M{
 			"status": "notauthorised",
@@ -256,18 +257,18 @@ func (job *Job) runRequest() {
 	}
 
 	// Set authenticated token
-	client.SetToken(token)
+	vclient.SetToken(token)
 
 	defer func() {
 		// Revoke the ephemeral token
-		_, err = client.Logical().Write("auth/token/revoke-self", nil)
+		_, err = vclient.Logical().Write("auth/token/revoke-self", nil)
 		if err != nil {
 			log.Printf("Error: revoking token after job completed: %s", err)
 		}
 	}()
 
 	// Decrypt the payload and merge into jobRequest
-	resp, err := client.Logical().Write("transit/decrypt/gostint", map[string]interface{}{
+	resp, err := vclient.Logical().Write("transit/decrypt/gostint", map[string]interface{}{
 		"ciphertext": job.Payload,
 	})
 	if err != nil {
@@ -318,6 +319,7 @@ func (job *Job) runRequest() {
 	job.EntryPoint = payloadObj.EntryPoint
 	job.Run = payloadObj.Run
 	job.WorkingDir = payloadObj.WorkingDir
+	job.EnvVars = payloadObj.EnvVars
 	job.SecretRefs = payloadObj.SecretRefs
 	job.SecretFileType = payloadObj.SecretFileType
 	job.ContOnWarnings = payloadObj.ContOnWarnings
@@ -384,7 +386,7 @@ func (job *Job) runRequest() {
 		// var secretValues api.Secret
 		secretValues := cache[secPath]
 		if secretValues == nil {
-			secretValues, err = client.Logical().Read(secPath)
+			secretValues, err = vclient.Logical().Read(secPath)
 
 			if err != nil {
 				job.UpdateJob(bson.M{
@@ -675,6 +677,7 @@ func (job *Job) runContainer() error {
 		Cmd:  job.Run,
 		Tty:  true,
 		User: fmt.Sprintf("%d:%d", gostintUID, gostintGID),
+		Env:  job.EnvVars,
 	}
 
 	if len(job.EntryPoint) != 0 {
