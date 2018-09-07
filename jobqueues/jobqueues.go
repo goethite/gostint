@@ -51,13 +51,18 @@ const gostintGID = 2001
 
 var debug = Debug("jobqueues")
 
+type AppRole struct {
+	ID   string
+	Name string
+}
+
 type PulledImage struct {
 	When time.Time
 }
 
 type JobQueues struct {
 	Db           *mgo.Database
-	AppRoleID    string
+	AppRole      *AppRole
 	NodeUUID     string
 	PulledImages map[string]PulledImage
 }
@@ -109,9 +114,9 @@ func (job *Job) String() string {
 }
 
 // Init Initialises the job queues loop
-func Init(db *mgo.Database, appRoleID string, nodeUUID string) {
+func Init(db *mgo.Database, appRole *AppRole, nodeUUID string) {
 	jobQueues.Db = db
-	jobQueues.AppRoleID = appRoleID
+	jobQueues.AppRole = appRole
 	jobQueues.PulledImages = make(map[string]PulledImage)
 	jobQueues.NodeUUID = nodeUUID
 	// start go routine to loop on the queues collection for new work
@@ -246,7 +251,7 @@ func (job *Job) runRequest() {
 		return
 	}
 
-	token, vclient, err := approle.Authenticate(jobQueues.AppRoleID, job.WrapSecretID)
+	token, vclient, err := approle.Authenticate(jobQueues.AppRole.ID, job.WrapSecretID)
 	if err != nil {
 		job.UpdateJob(bson.M{
 			"status": "notauthorised",
@@ -268,9 +273,12 @@ func (job *Job) runRequest() {
 	}()
 
 	// Decrypt the payload and merge into jobRequest
-	resp, err := vclient.Logical().Write("transit/decrypt/gostint", map[string]interface{}{
-		"ciphertext": job.Payload,
-	})
+	resp, err := vclient.Logical().Write(
+		fmt.Sprintf("transit/decrypt/%s", jobQueues.AppRole.Name),
+		map[string]interface{}{
+			"ciphertext": job.Payload,
+		},
+	)
 	if err != nil {
 		job.UpdateJob(bson.M{
 			"status": "failed",

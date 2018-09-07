@@ -2,6 +2,8 @@
 
 VAULTVER=0.11.0
 
+GOSTINT_ROLENAME="gostint-role"
+
 # Install and start Vault server in dev mode
 wget -qO /tmp/vault.zip https://releases.hashicorp.com/vault/${VAULTVER}/vault_${VAULTVER}_linux_amd64.zip && \
    ( cd /usr/local/bin && unzip /tmp/vault.zip )
@@ -58,7 +60,7 @@ echo '=== Enable transit plugin ==============================='
 vault secrets enable transit
 
 echo '=== Create gostint instance transit keyring =============='
-vault write -f transit/keys/gostint
+vault write -f transit/keys/$GOSTINT_ROLENAME
 
 # Enable Vault AppRole
 echo '=== enable AppRole auth ================================='
@@ -84,12 +86,12 @@ echo '=== Create policy to access transit decrypt gostint for gostint-role =====
 curl -s \
   --request POST \
   --header 'X-Vault-Token: root' \
-  --data '{"policy": "path \"transit/decrypt/gostint\" {\n  capabilities = [\"update\"]\n}"}' \
+  --data '{"policy": "path \"transit/decrypt/'$GOSTINT_ROLENAME'\" {\n  capabilities = [\"update\"]\n}"}' \
   ${VAULT_ADDR}/v1/sys/policy/gostint-approle-transit-decrypt-gostint
 
 # Create named role for gostint
 echo '=== Create approle role for gostint ======================'
-vault write auth/approle/role/gostint-role \
+vault write auth/approle/role/$GOSTINT_ROLENAME \
   secret_id_ttl=24h \
   secret_id_num_uses=10000 \
   token_num_uses=10 \
@@ -98,5 +100,5 @@ vault write auth/approle/role/gostint-role \
   policies="gostint-approle-secret-v1,gostint-approle-kv-v2,gostint-approle-transit-decrypt-gostint"
 
 # Get RoleID for gostint
-export GOSTINT_ROLEID=`vault read -format=yaml -field=data auth/approle/role/gostint-role/role-id | awk '{print $2;}'`
-echo "export GOSTINT_ROLEID=$GOSTINT_ROLEID" | tee -a .bashrc
+export GOSTINT_ROLEID=`vault read -format=yaml -field=data auth/approle/role/$GOSTINT_ROLENAME/role-id | awk '{print $2;}'`
+echo -e "export GOSTINT_ROLEID=$GOSTINT_ROLEID\nexport GOSTINT_ROLENAME=$GOSTINT_ROLENAME" | tee -a .bashrc
