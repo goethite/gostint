@@ -9,6 +9,7 @@
 #     -e VAULT_ADDR="$VAULT_ADDR" \
 #     -e GOSTINT_DBAUTH_TOKEN="$token" \
 #     -e GOSTINT_ROLEID="$roleid" \
+#     -e GOSTINT_ROLENAME="gostint-role" \
 #     -e GOSTINT_DBURL="dbhost:27017"
 #     gostint
 #

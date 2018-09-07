@@ -205,13 +205,17 @@ func main() {
 	// init ping and clean
 	nodeUUID := pingclean.Init(gostintDb)
 
-	appRoleID = os.Getenv("GOSTINT_ROLEID")
+	appRole := jobqueues.AppRole{
+		ID:   os.Getenv("GOSTINT_ROLEID"),
+		Name: os.Getenv("GOSTINT_ROLENAME"),
+	}
+	// appRoleID = os.Getenv("GOSTINT_ROLEID")
 
 	// Create RESTful routes
 	router := Routes()
 
 	// Start job queues
-	jobqueues.Init(gostintDb, appRoleID, nodeUUID)
+	jobqueues.Init(gostintDb, &appRole, nodeUUID)
 
 	// TODO: make non TLS an option from command line parameters
 	// log.Fatal(http.ListenAndServe(":3232", router))
