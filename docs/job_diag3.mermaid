@@ -1,0 +1,45 @@
+sequenceDiagram
+  participant requestor
+  participant poster as poster-routing
+  participant o as orchestrator
+  participant gostint
+  participant queues
+  participant vault
+  participant docker
+
+
+  %% Assuming participants requestor and poster are already authenticated
+  %% with the vault (assuming using their own AppRoles, with appropriate
+  %% policies).
+
+  %% gostint deployment
+  o->>gostint: deploys with Vault AppRoleID
+  o->>requestor: onboard AppRole and url/path to gostint
+
+  %% requestor consumes gostint as an automation service
+  requestor->>vault: request wrapped secretID for AppRole
+  requestor->>vault: send base64 json (inc wrapped SecretID) to a cubbyhole?
+  vault-->>requestor: wrapped response to cubbyhole token (use-limit=1, ttl=24h)?
+  requestor->>poster: submit job request w/wrap token to cubbyhole & qname
+
+  poster->>gostint: authenticate(own AppRole/token?) and POST job request
+
+  gostint->>queues: push job to a queue
+  gostint->>gostint: processing queues
+
+  queues->>gostint: pop next from a queue
+  gostint->>vault: retrieve cubbyhole and conv job to json
+  gostint->>vault: authenticate job request (approle: secretID)
+  vault-->>gostint: token
+  gostint->>vault: get requested secrets for job
+  gostint->>docker: runs requested job with secrets injected
+  docker-->>gostint: job completes
+  gostint->>queues: job status/results are saved
+  gostint->>vault: revoke token
+
+  requestor->>poster: polls for results
+  poster->>gostint: get results for job
+  gostint->>queues: get job results
+  queues-->>gostint: return job results
+  gostint-->>poster: return job results
+  poster-->>requestor: return job results

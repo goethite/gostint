@@ -1,141 +1,18 @@
-# Job Sequence Diagram
-Note: to view the sequence diagrams use the Atom editor with the atom-mermaid  plugin.
+# Job Sequence Diagrams Brainstorming the Protocol Using Hashicorp Vault
 
-```mermaid
-sequenceDiagram
-  participant requestor as trusted requestor / poster
-  participant od as deployment orchestrator
-  participant gostint
-  participant vault
-  participant queues
-  participant docker
-
-  od->>vault: create AppRole for gostint
-  od->>gostint: deploys with Vault AppRoleID
-  requestor->>vault: authenticates (token, own approle, etc...)
-  %% vault-->>vault: grants
-  requestor->>vault: requests secretId for AppRole
-  vault-->>requestor: secretID
-
-  requestor->>gostint: POST job with secretId
-
-  gostint->>vault: authenticate poster (approle: secretId)
-  vault-->>gostint: token (discarded/revoked)
-  gostint->>queues: push to a queue
-
-  gostint-->>gostint: process queues
-
-  queues->>gostint: pop next from a queue
-  gostint->>vault: authenticate requestor (approle: secretId)
-  vault-->>gostint: token
-  gostint->>vault: get requested secrets for job
-  gostint->>docker: runs requested job with secrets from vault
-  docker-->>gostint: job completes
-  gostint->>queues: job status/results are saved
-  gostint->>vault: revoke token
-
-  requestor->>gostint: polls for results
-  gostint->>queues: get job results
-  queues-->>gostint: return job results
-  gostint-->>requestor: return job results
-```
+![First thoughts on job submission protocol](job_diag1.mermaid.png)
 * Requestor and poster here are the same enitity.
 
 ## Possible future state with Vault Cubbyhole
-```mermaid
-sequenceDiagram
-  participant requestor
-  participant poster
-  participant o as orchestrator e.g. kubernetes
-  participant gostint
-  participant vault
-  participant queues
-  participant docker
 
-  o->>gostint: deploys with Vault AppRoleID
-  requestor->>vault: requests secretId[1] for AppRole
-  vault-->>requestor: secretID[1]
-  requestor->>poster: submit job to run with secretId[1]
-
-  poster->>vault: requests secretId[1] for AppRole
-  vault-->>poster: secretID[2]
-  poster->>gostint: POST job with secretId[2]
-
-  gostint->>vault: authenticate poster (approle: secretId[2])
-  vault-->>gostint: token[2] (discarded/revoked)
-  gostint->>queues: push to a queue
-
-  gostint-->>gostint: process queues
-
-  queues->>gostint: pop next from a queue
-  gostint->>vault: authenticate requestor (approle: secretId[1])
-  vault-->>gostint: token[1]
-  gostint->>vault: get requested secrets for job
-  gostint->>docker: runs requested job with secrets from vault
-  docker-->>gostint: job completes
-  gostint->>queues: job status/results are saved
-  gostint->>vault: revoke token[1]
-
-  requestor->>poster: polls for results
-  poster->>gostint: get results for job
-  gostint->>queues: get job results
-  queues-->>gostint: return job results
-  gostint-->>poster: return job results
-  poster-->>requestor: return job results
-```
+![job two-step with intermediary](job_diag2.mermaid.png)
 * This two step authentication of requestor and poster allows for an intermediary
 api routing "middleware" - in future this will be leveraged to support the
 requestor posting the job details into a Vault "Cubbyhole" for gostint to pickup,
 thereby removing the risk of a man-in-the-middle-attack.
 
 This diagram below includes the cubbyhole interactions:
-```mermaid
-sequenceDiagram
-  participant requestor
-  participant poster as poster / routing
-  participant o as orchestrator e.g. kubernetes
-  participant gostint
-  participant queues
-  participant vault
-  participant docker
-
-
-  %% Assuming participants requestor and poster are already authenticated
-  %% with the vault (assuming using their own AppRoles, with appropriate
-  %% policies).
-
-  %% gostint deployment
-  o->>gostint: deploys with Vault AppRoleID
-  o->>requestor: onboard AppRole and url/path to gostint
-
-  %% requestor consumes gostint as an automation service
-  requestor->>vault: request wrapped secretID for AppRole
-  requestor->>vault: send base64 json (inc wrapped SecretID) to a cubbyhole?
-  vault-->>requestor: wrapped response to cubbyhole token (use-limit=1, ttl=24h)?
-  requestor->>poster: submit job request w/wrap token to cubbyhole & qname
-
-  poster->>gostint: authenticate(own AppRole/token?) and POST job request
-
-  gostint->>queues: push job to a queue
-  gostint->>gostint: processing queues
-
-  queues->>gostint: pop next from a queue
-  gostint->>vault: retrieve cubbyhole and conv job to json
-  gostint->>vault: authenticate job request (approle: secretID)
-  vault-->>gostint: token
-  gostint->>vault: get requested secrets for job
-  gostint->>docker: runs requested job with secrets injected
-  docker-->>gostint: job completes
-  gostint->>queues: job status/results are saved
-  gostint->>vault: revoke token
-
-  requestor->>poster: polls for results
-  poster->>gostint: get results for job
-  gostint->>queues: get job results
-  queues-->>gostint: return job results
-  gostint-->>poster: return job results
-  poster-->>requestor: return job results
-```
+![job via cubbyhole](job_diag3.mermaid.png)
 Policy notes:
 * poster must not be able to interact with cubbyholes at all.
 
@@ -171,165 +48,22 @@ Code: 403. Errors:
 
 * permission denied
 ```
-AFAIK once a token is created, it is not possible to then wrap it, so this token
-will need to be passed asis.
 
-## Brainstorming options for passing job requests through an intermediary (aka the "poster")
+## Options for securely passing job requests through an intermediary (aka the "poster")
 (e.g. API GW/Lambda/Routing)
 
-Assumption: all communications to/from the vault are direct TLS.
-```mermaid
-sequenceDiagram
-  participant requestor
-  participant poster as poster / routing
-  %% participant o as orchestrator e.g. kubernetes
-  participant gostint
-  participant queues
-  participant vault
-  participant docker
-
-  %% build job to submit
-  requestor->>vault: (authenticates with)
-  requestor->>vault: request wrapped SecretID for AppRole(gostint)
-  vault-->>requestor: wrapped SecretID (token)
-  requestor->>vault: request a default token ttl=10m use-limit=2
-  vault-->>requestor: a default token
-  requestor->>vault: place job request (inc wrapped SecretID) in the default token's cubbyhole
-
-  %% request job to be posted/routing
-  requestor->>poster: (authenticates with)
-  requestor->>poster: POST job qname+default token+cubbyhole path
-
-  %% problem at this point is that the poster could intercept the request,
-  %% use the default token to get the cubbyhole'd job request and also get the
-  %% SecretID from the wrapped token.  However both the default token and the
-  %% SecretID wrapping token can nolonger be used - this state can be detected
-  %% and alerted as a MITM attack.
-
-  poster->>gostint: (authenticates with)
-  poster->>gostint: fwd POST job request
-
-  %% extract job from cubbyhole
-  gostint->>vault: retrieve cubbyhole from path using default token (last use)
-  vault-->>gostint: job request from cubbyhole
-
-  gostint->>queues: Queues the job request
-  gostint-->>poster: job queued response
-  poster-->>requestor: job queued response
-
-  gostint-->>gostint: sometime later
-
-  queues->>gostint: job is popped from the queue
-  gostint->>vault: unwrap wrapped SecretID
-  vault-->>gostint: SecretID
-  gostint->>vault: authenticate with RoleID+SecretID
-  vault-->>gostint: token (with appropriate policies for automation)
-  %% this token is used by gostint going fwd and passed to running job
-  gostint->>vault: retrieve secrets at refs from job request
-  vault-->>gostint: secrets
-
-  gostint->>docker: run job request with injected secrets...
-  docker-->>gostint: return results
-  gostint->>queues: save results
-  gostint->>vault: revoke approle token (drop job privs)
-
-  requestor->>poster: poll for results
-  poster->>gostint: poll for results
-  gostint->> queues: retrieve results
-  queues-->>gostint: results
-  gostint-->>poster: results
-  poster-->>requestor: results
-
-  requestor-->>requestor: loop polls until success/failed/notauthorised/unknown
-
-```
+Assumption: all communications to/from the vault are direct using TLS.
+![diag4](job_diag4.mermaid.png)
 Though this approach can highlight/alert on tampering, it still doesnt protect
 the posted job content and the AppRole SecretID.  Also it doesnt prevent the
-injection of malicious content (using capture SecretID) - assuming the attacker
-subverting the poster participant has sufficient vault access to create a new
+injection of malicious content (using captured SecretID) - assuming the attacker
+subverting the poster has sufficient vault access to create a new
 cubbyhole.
 
 Next lets look at an end-2-end encryption solution for job requests through an
 intermediary using asymmetric encryption...
 
-```mermaid
-sequenceDiagram
-  participant requestor
-  participant poster as poster / routing
-  %% participant o as orchestrator e.g. kubernetes
-  participant gostint
-  participant queues
-  participant vault as vault transit / e2e
-  participant docker
-
-  %% Enrolement
-  gostint->>vault: Enroles its RSA Public key
-
-  %% build job to submit
-  requestor->>vault: (authenticates with)
-  requestor->>vault: request wrapped SecretID for AppRole(gostint)
-  vault-->>requestor: wrapped SecretID (token)
-
-  requestor->>vault: request e2e&#xb9; encryption of job payload (inc wrapped SecretID)
-
-  requestor->>vault: request a default token ttl=10m use-limit=2
-  vault-->>requestor: a default token
-  requestor->>vault: place encrypted job payload in the default token's cubbyhole
-
-  %% request job to be posted/routing
-  requestor->>poster: (authenticates with)
-  requestor->>poster: POST job qname+default token+cubbyhole path
-
-  %% This time, even if the poster is hacked and intercepts the POST request,
-  %% and using the default token to retrieve the cubbyhole, the data returned
-  %% is encrypted, such that only gostint's RSA Private Key can decrypt it.
-  %% This tampering of the request can be detected to raise an alert of the
-  %% MITM attack.
-
-  poster->>gostint: (authenticates with)
-  poster->>gostint: fwd POST job request
-
-  %% extract job from cubbyhole
-  gostint->>vault: retrieve cubbyhole from path using default token (last use)
-  vault-->>gostint: job request from cubbyhole
-
-  %% we can decrypt here or at point of job execution, in this example we will
-  %% leave the payload encrypted until it is needed for the job to run.
-
-  gostint->>queues: Queues the (still encrypted) job request
-  gostint-->>poster: job queued response
-  poster-->>requestor: job queued response
-
-  gostint-->>gostint: sometime later
-
-  queues->>gostint: job is popped from the queue
-
-  % Decrypt
-  gostint->>gostint: decrypt payload with RSA private key
-
-  gostint->>vault: unwrap wrapped SecretID (from payload)
-  vault-->>gostint: SecretID
-  gostint->>vault: authenticate with RoleID+SecretID
-  vault-->>gostint: token (with appropriate policies for automation)
-  %% this token is used by gostint going fwd and passed to running job
-  gostint->>vault: retrieve secrets at refs&#xb2; from job request
-  vault-->>gostint: secrets
-
-  gostint->>docker: run job request with injected secrets...
-  docker-->>gostint: return results
-  gostint->>queues: save results
-  gostint->>vault: revoke approle token (drop job privs)
-
-  requestor->>poster: poll for results
-  poster->>gostint: poll for results
-  gostint->> queues: retrieve results
-  queues-->>gostint: results
-  gostint-->>poster: results&#xb3;
-  poster-->>requestor: results
-
-  requestor-->>requestor: loop polls until success/failed/notauthorised/unknown
-
-```
+![diag5](job_diag5.mermaid.png)
 [&#xb9;] e2e - this can be a multi-step process leveraging the Vault's Transit
 secret engine (e.g. create a random key, encrypt payload using AES256GCM, then
 encrypt the key using RSA2048 with gostint's RSA public key), or possibly use
@@ -347,96 +81,9 @@ AND tamper / interception detection during transit through the intermediary
 poster / routing.
 
 ### Repeat of the above diagram but this time based on new understanding of the transit secret engine.
+(This approach was used as the guide for the current release of GoStint)
 
-```mermaid
-sequenceDiagram
-  participant requestor
-  participant poster as poster / routing
-  participant o as orchestrator e.g. kubernetes
-  participant gostint
-  participant queues
-  participant vault as vault transit / e2e
-  participant docker
-
-  %% Enrolement
-  o->>vault: Onboards requestor
-  o->>vault: Onboards gostint's transit keyring, policies, etc...
-  %% requestor can only encrypt.
-  %% gostint can also decrypt.
-  %% poster, if even in vault at all, has no permissions here.
-
-  %% build job to submit
-  requestor->>vault: (authenticates with)
-  requestor->>vault: request wrapped SecretID for AppRole(gostint)
-  vault-->>requestor: wrapped SecretID (token)
-
-  requestor->>vault: request transit keyring to encrypt job payload
-  %% the plaintext sent is a base64 encoded json document
-  vault-->>requestor: cyphertext
-
-  requestor->>vault: request a default token ttl=10m use-limit=2
-  vault-->>requestor: a default token
-  requestor->>vault: place encrypted job payload in the default token's cubbyhole
-
-  %% request job to be posted/routing
-  requestor->>poster: (authenticates with)
-  requestor->>poster: POST job qname+default token+cubbyhole path+wrapped SecretID
-
-  %% This time, even if the poster is hacked and intercepts the POST request,
-  %% and using the default token to retrieve the cubbyhole, the data returned
-  %% is encrypted, such that only gostint's transit keyring can decrypt it.
-  %% This tampering of the request can be detected to raise an alert of the
-  %% MITM attack.
-
-  poster->>gostint: (authenticates with)
-  poster->>gostint: fwd POST job request
-
-  %% extract job from cubbyhole
-  gostint->>vault: retrieve cubbyhole from path using default token (last use)
-  vault-->>gostint: (still encrypted) job request from cubbyhole
-
-  %% we can decrypt here or at point of job execution, in this example we will
-  %% leave the payload encrypted until it is needed for the job to run.
-
-  gostint->>queues: Queues the (still encrypted) job request
-  %% Note; the wrapped SecretID is not encrypted
-  gostint-->>poster: job queued response
-  poster-->>requestor: job queued response
-
-  gostint-->>gostint: sometime later
-
-  queues->>gostint: job is popped from the queue
-
-  %% authenticate
-  gostint->>vault: unwrap wrapped SecretID
-  vault-->>gostint: SecretID
-  gostint->>vault: authenticate with RoleID+SecretID
-  vault-->>gostint: token (with appropriate policies for automation)
-  %% this token is used by gostint going fwd and passed to running job
-
-  %% Decrypt
-  %% gostint->>gostint: decrypt payload with RSA private key
-  gostint->>vault: request decrypt of job using keyring
-  vault-->>gostint: plaintext base64 encoded job request payload
-
-  gostint->>vault: retrieve secrets at refs from job request
-  vault-->>gostint: secrets
-
-  gostint->>docker: run job request with injected secrets...
-  docker-->>gostint: return results
-  gostint->>queues: save results
-  gostint->>vault: revoke approle token (drop job privs)
-
-  requestor->>poster: poll for results
-  poster->>gostint: poll for results
-  gostint->> queues: retrieve results
-  queues-->>gostint: results
-  gostint-->>poster: results&#xb3;
-  poster-->>requestor: results
-
-  requestor-->>requestor: loop polls until success/failed/notauthorised/unknown
-
-```
+![job via intermediary](job_via_intermediary.mermaid.png)
 ---
 
 Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>

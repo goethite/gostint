@@ -18,6 +18,7 @@ demo driving the gostint api to run a selection of Docker container based jobs.
 JSON jobs used in these tests are in the respective [tests](tests/) files.
 
 * [Dev Notes](docs/devnotes.md)
+* [Job States](docs/jobstates.md)
 * [Brainstorming job sequence diagrams](docs/jobsequence.md)
 
 ## Features

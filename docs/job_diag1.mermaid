@@ -1,0 +1,36 @@
+sequenceDiagram
+  participant requestor as requestor-poster
+  participant od as orchestrator
+  participant gostint
+  participant vault
+  participant queues
+  participant docker
+
+  od->>vault: create AppRole for gostint
+  od->>gostint: deploys with Vault AppRoleID
+  requestor->>vault: authenticates (token, own approle, etc...)
+  %% vault-->>vault: grants
+  requestor->>vault: requests secretId for AppRole
+  vault-->>requestor: secretID
+
+  requestor->>gostint: POST job with secretId
+
+  gostint->>vault: authenticate poster (approle: secretId)
+  vault-->>gostint: token (discarded/revoked)
+  gostint->>queues: push to a queue
+
+  gostint-->>gostint: process queues
+
+  queues->>gostint: pop next from a queue
+  gostint->>vault: authenticate requestor (approle: secretId)
+  vault-->>gostint: token
+  gostint->>vault: get requested secrets for job
+  gostint->>docker: runs requested job with secrets from vault
+  docker-->>gostint: job completes
+  gostint->>queues: job status/results are saved
+  gostint->>vault: revoke token
+
+  requestor->>gostint: polls for results
+  gostint->>queues: get job results
+  queues-->>gostint: return job results
+  gostint-->>requestor: return job results
