@@ -75,7 +75,8 @@ container is instantiated and placed in the container either as `/secrets.yml` o
 ### A Helm Chart for Kubernetes
 A [proof-of-concept] [Helm Chart](https://github.com/goethite/gostint-helm)
 is available to deploy GoStint, Vault with etcd
-backend, and MongoDB - as a self-contained automation API.
+backend, and MongoDB - as a self-contained automation API - for demonstration
+purposes.
 
 Note: The gostint pods are run in "privileged" mode to enable
 support for docker-in-docker running of the containerised jobs.
@@ -85,3 +86,12 @@ It is early days for this project and it is still considered a proof-of-concept,
 as such I would certainly not recommend it for production at this stage.
 More work needs to be done around reviewing and securing the api protocols,
 especially around the AppRoles' policies.
+
+### Job States
+![jobstates](https://raw.githubusercontent.com/goethite/gostint/master/docs/jobstates.mermaid.png)
+
+### Job Sequence Diagram
+This diagram is taken from the original brainstorming for the end-to-end
+secure job submission design - you can see the full document
+[here](https://github.com/goethite/gostint/blob/master/docs/jobsequence.md)
+![jobsequence](https://raw.githubusercontent.com/goethite/gostint/master/docs/job_via_intermediary.mermaid.png)
