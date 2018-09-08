@@ -29,6 +29,7 @@ The job payload encrypted and placed in the cubbyhole can contain:
 | entrypoint | Array of strings defining the entrypoint in the container, see `docker run`|
 | run | Array of strings defining the command to run, see `docker run`|
 | working_directory | Working directory for the command to run in |
+| env_vars | Environment variables passed to the job container |
 | secret_refs | Array of strings `variable_name@vault_path` to retrieve from the Vault and inject into the container as /secrets.yml \| .json |
 | secret_file_type | String 'yaml' or 'json' |
 | cont_on_warnings | Boolean default false. Whether to panic or continue on secret resolving warnings from the Vault |
