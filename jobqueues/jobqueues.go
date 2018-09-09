@@ -51,20 +51,17 @@ const gostintGID = 2001
 
 var debug = Debug("jobqueues")
 
+// AppRole holds Vault App Role details
 type AppRole struct {
 	ID   string
 	Name string
 }
 
-type PulledImage struct {
-	When time.Time
-}
-
+// JobQueues holds jobqueue settings and state
 type JobQueues struct {
-	Db           *mgo.Database
-	AppRole      *AppRole
-	NodeUUID     string
-	PulledImages map[string]PulledImage
+	Db       *mgo.Database
+	AppRole  *AppRole
+	NodeUUID string
 }
 
 var jobQueues JobQueues
@@ -84,15 +81,16 @@ type Job struct {
 
 	// These are populated from the decrypted payload
 	// NOTE: ContainerImage: this may be passed in the content itself as meta data
-	ContainerImage string   `json:"container_image"   bson:"container_image"`
-	Content        string   `json:"content"           bson:"content"`
-	EntryPoint     []string `json:"entrypoint"        bson:"entrypoint"`
-	Run            []string `json:"run"               bson:"run"`
-	WorkingDir     string   `json:"working_directory" bson:"working_directory"`
-	EnvVars        []string `json:"env_vars"          bson:"env_vars"`
-	SecretRefs     []string `json:"secret_refs"       bson:"secret_refs"`
-	SecretFileType string   `json:"secret_file_type"  bson:"secret_file_type"`
-	ContOnWarnings bool     `json:"cont_on_warnings"  bson:"cont_on_warnings"`
+	ContainerImage  string   `json:"container_image"   bson:"container_image"`
+	ImagePullPolicy string   `json:"image_pull_policy" bson:"image_pull_policy"`
+	Content         string   `json:"content"           bson:"content"`
+	EntryPoint      []string `json:"entrypoint"        bson:"entrypoint"`
+	Run             []string `json:"run"               bson:"run"`
+	WorkingDir      string   `json:"working_directory" bson:"working_directory"`
+	EnvVars         []string `json:"env_vars"          bson:"env_vars"`
+	SecretRefs      []string `json:"secret_refs"       bson:"secret_refs"`
+	SecretFileType  string   `json:"secret_file_type"  bson:"secret_file_type"`
+	ContOnWarnings  bool     `json:"cont_on_warnings"  bson:"cont_on_warnings"`
 
 	// These are returned
 	Status        string    `json:"status"            bson:"status"`
@@ -117,8 +115,8 @@ func (job *Job) String() string {
 func Init(db *mgo.Database, appRole *AppRole, nodeUUID string) {
 	jobQueues.Db = db
 	jobQueues.AppRole = appRole
-	jobQueues.PulledImages = make(map[string]PulledImage)
 	jobQueues.NodeUUID = nodeUUID
+
 	// start go routine to loop on the queues collection for new work
 	// Qname defines the FIFO queue.
 	// Provide a Wake channel for immediate pull ???
@@ -139,14 +137,11 @@ func requestHandler() {
 		}
 
 		for _, q := range queues {
-			// log.Printf("queue: %s\n", q)
 			job := Job{}
 
 			chg := mgo.Change{
 				Update: bson.M{"$set": bson.M{
-					// "node_uuid": jobQueues.NodeUUID,
 					"status": "running",
-					// "started": time.Now(),
 				}},
 				ReturnNew: false,
 			}
@@ -162,15 +157,12 @@ func requestHandler() {
 				}
 				log.Printf("Error: Pop from queue %s failed: %v\n", q, err)
 			}
-			// log.Printf("ci: %v", ci)
-			// log.Println("After ci")
 
 			// NOTE: if the returned job has status = "queued", then this has just
 			// been atomically pop'd from the FIFO stack
 			if job.Status != "queued" {
 				break
 			}
-			// log.Printf("id: %v", ci.InsertedId)
 
 			// set node uuid that we are running on
 			chg2 := mgo.Change{
@@ -323,6 +315,7 @@ func (job *Job) runRequest() {
 	job.Payload = ""
 	// Merge required fields from payload
 	job.ContainerImage = payloadObj.ContainerImage
+	job.ImagePullPolicy = payloadObj.ImagePullPolicy
 	job.Content = payloadObj.Content
 	job.EntryPoint = payloadObj.EntryPoint
 	job.Run = payloadObj.Run
@@ -336,11 +329,24 @@ func (job *Job) runRequest() {
 		job.SecretFileType = "yaml"
 	}
 
+	if job.ImagePullPolicy == "" {
+		job.ImagePullPolicy = "IfNotPresent"
+	}
+
+	if job.ImagePullPolicy != "IfNotPresent" && job.ImagePullPolicy != "Always" {
+		job.UpdateJob(bson.M{
+			"status": "failed",
+			"ended":  time.Now(),
+			"output": fmt.Sprintf("Incorrect value for image_pull_policy: %s", job.ImagePullPolicy),
+		})
+		return
+	}
+
 	// Allow SecretRefs to be passed in job, e.g.
 	// SecretRefs: see tests/job1.json
 	// briefly cache the path response to allow multiple values to be extracted
 	// without needing to re-query the Vault.
-	secRefRe, err := regexp.Compile("^(\\w+)@([\\w\\-_/]+)\\.(([\\w\\-_]+))$")
+	secRefRe, err := regexp.Compile("^(\\w+)@([\\w\\-_/]+)\\.([\\w\\-_]+)$")
 	if err != nil {
 		job.UpdateJob(bson.M{
 			"status": "failed",
@@ -469,12 +475,12 @@ func (job *Job) runRequest() {
 			{Name: "secrets.yml", Content: secretsYAML},
 		}
 	} else if job.SecretFileType == "json" {
-		secretsJSON, err := json.Marshal(secrets)
-		if err != nil {
+		secretsJSON, err2 := json.Marshal(secrets)
+		if err2 != nil {
 			job.UpdateJob(bson.M{
 				"status": "failed",
 				"ended":  time.Now(),
-				"output": fmt.Sprintf("Failed to Marshal secrets to json for container injection: %s", err),
+				"output": fmt.Sprintf("Failed to Marshal secrets to json for container injection: %s", err2),
 			})
 			return
 		}
@@ -544,14 +550,13 @@ func (job *Job) runRequest() {
 		}
 
 		// Look for gostint.yml in content
-		// fmt.Printf("tar data: %v", string(data))
 		meta := Meta{}
-		tempRdr, err := gzip.NewReader(strings.NewReader(string(data)))
-		if err != nil {
+		tempRdr, err2 := gzip.NewReader(strings.NewReader(string(data)))
+		if err2 != nil {
 			job.UpdateJob(bson.M{
 				"status": "failed",
 				"ended":  time.Now(),
-				"output": fmt.Sprintf("Failed to unzip content to rdr for gostint.yaml: %s", err),
+				"output": fmt.Sprintf("Failed to unzip content to rdr for gostint.yaml: %s", err2),
 			})
 			return
 		}
@@ -581,9 +586,8 @@ func (job *Job) runRequest() {
 				}
 			}
 
-			// fmt.Printf("bufMeta: %s\n", bufMeta.Bytes())
 			// parse gostint.yml
-			err := yaml.Unmarshal(bufMeta.Bytes(), &meta)
+			err = yaml.Unmarshal(bufMeta.Bytes(), &meta)
 			if err != nil {
 				job.UpdateJob(bson.M{
 					"status": "failed",
@@ -657,13 +661,7 @@ func (job *Job) runContainer() error {
 		}
 	}
 
-	var imgAgeDays time.Duration
-	if imgAlreadyPulled {
-		imgAgeDays = (time.Now().Sub(jobQueues.PulledImages[job.ContainerImage].When)) / (time.Hour * 24)
-	}
-
-	if !imgAlreadyPulled || imgAgeDays > 1 {
-		// reader, err := cli.ImagePull(ctx, "docker.io/library/busybox", types.ImagePullOptions{})
+	if !imgAlreadyPulled || job.ImagePullPolicy == "Always" {
 		reader, err2 := cli.ImagePull(ctx, imgRef, types.ImagePullOptions{})
 		if err2 != nil {
 			log.Printf("ImagePull imgRef: %s", imgRef)
@@ -674,18 +672,16 @@ func (job *Job) runContainer() error {
 		// move on to creating containers...
 		io.Copy(os.Stdout, reader)
 
-		jobQueues.PulledImages[job.ContainerImage] = PulledImage{When: time.Now()}
 	} else {
-		log.Printf("Image %s already pulled, age: %d", job.ContainerImage, imgAgeDays)
+		log.Printf("Image %s already pulled & image_pull_policy: %s", job.ContainerImage, job.ImagePullPolicy)
 	}
 
 	cfg := container.Config{
 		Image: job.ContainerImage,
-		// Cmd:   []string{"echo", "hello world"},
-		Cmd:  job.Run,
-		Tty:  true,
-		User: fmt.Sprintf("%d:%d", gostintUID, gostintGID),
-		Env:  job.EnvVars,
+		Cmd:   job.Run,
+		Tty:   true,
+		User:  fmt.Sprintf("%d:%d", gostintUID, gostintGID),
+		Env:   job.EnvVars,
 	}
 
 	if len(job.EntryPoint) != 0 {
@@ -727,7 +723,6 @@ func (job *Job) runContainer() error {
 	// Copy content into container prior to start it
 	opts := types.CopyToContainerOptions{
 		AllowOverwriteDirWithFile: true,
-		// CopyUIDGID:                true,
 	}
 	err = cli.CopyToContainer(ctx, resp.ID, "/", contentRdr, opts)
 	if err != nil {
@@ -740,7 +735,7 @@ func (job *Job) runContainer() error {
 		return err
 	}
 
-	err = addUser(cli, ctx, resp.ID, "gostint", gostintUID, gostintGID, "/tmp")
+	err = addUser(ctx, cli, resp.ID, "gostint", gostintUID, gostintGID, "/tmp")
 	if err != nil {
 		return err
 	}
@@ -768,7 +763,6 @@ func (job *Job) runContainer() error {
 
 	var buf bytes.Buffer
 	io.Copy(&buf, out)
-	// fmt.Println(buf.String())
 
 	finalStatus := "success"
 	if status != 0 {
@@ -782,19 +776,10 @@ func (job *Job) runContainer() error {
 		"return_code": status,
 	})
 
-	// rmOpts := types.ContainerRemoveOptions{
-	// 	RemoveVolumes: true,
-	// 	RemoveLinks:   false,
-	// 	Force:         true,
-	// }
-	// if err := cli.ContainerRemove(ctx, resp.ID, rmOpts); err != nil {
-	// 	log.Printf("Error: removing container: %s", err)
-	// }
-
 	return nil
 }
 
-func addUser(cli *client.Client, ctx context.Context, containerID, name string, uid, gid int, home string) error {
+func addUser(ctx context.Context, cli *client.Client, containerID, name string, uid, gid int, home string) error {
 	// Get /etc/passwd
 	rdr, _, err := cli.CopyFromContainer(ctx, containerID, "/etc/passwd")
 	if err != nil {
@@ -821,7 +806,6 @@ func addUser(cli *client.Client, ctx context.Context, containerID, name string, 
 			}
 		}
 	}
-	// log.Printf("bufMeta: %v", bufMeta.String())
 	passwd := bufMeta.String()
 
 	// add gostint user
@@ -837,7 +821,6 @@ func addUser(cli *client.Client, ctx context.Context, containerID, name string, 
 
 	opts := types.CopyToContainerOptions{
 		AllowOverwriteDirWithFile: true,
-		// CopyUIDGID:                true,
 	}
 	err = cli.CopyToContainer(ctx, containerID, "/etc", tarRdr, opts)
 	if err != nil {
@@ -847,6 +830,7 @@ func addUser(cli *client.Client, ctx context.Context, containerID, name string, 
 	return nil
 }
 
+// TarEntry holds a tar file entity
 type TarEntry struct {
 	Name    string
 	Content []byte

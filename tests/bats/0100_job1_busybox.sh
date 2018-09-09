@@ -3,6 +3,7 @@
 @test "Submitting job1 busybox should return json" {
   # Get a default token for the api post authentication
   TOKEN=$(vault write -f auth/token/create policies=default -format=json | jq .auth.client_token -r)
+  # TOKEN=$(vault write -f auth/token/create policies=gostint-client -format=json | jq .auth.client_token -r)
   echo "TOKEN: $TOKEN" >&2
   echo "$TOKEN" > $BATS_TMPDIR/token
 

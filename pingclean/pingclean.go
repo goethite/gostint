@@ -29,24 +29,27 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// PingClean holds module state
 type PingClean struct {
-	Uuid string
+	UUID string
 	Db   *mgo.Database
 }
 
 var pingClean PingClean
 
+// Init ping and client operations for cluster
 func Init(db *mgo.Database) string {
 	pingClean.Db = db
 	// Assign this node a uuid
-	pingClean.Uuid = uuid.NewV4().String()
+	pingClean.UUID = uuid.NewV4().String()
 	wakeup()
 
 	go interval()
 
-	return pingClean.Uuid
+	return pingClean.UUID
 }
 
+// Node holds gostint node/pod instance data
 type Node struct {
 	ID       string    `json:"_id"        bson:"_id"`
 	LastSeen time.Time `json:"last_seen"  bson:"last_seen"`
@@ -58,8 +61,8 @@ func wakeup() {
 	nodes := db.C("nodes")
 	queues := db.C("queues")
 
-	_, err := nodes.UpsertId(pingClean.Uuid, Node{
-		ID:       pingClean.Uuid,
+	_, err := nodes.UpsertId(pingClean.UUID, Node{
+		ID:       pingClean.UUID,
 		LastSeen: time.Now(),
 	})
 	if err != nil {

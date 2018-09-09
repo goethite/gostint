@@ -54,6 +54,7 @@ func GetDb() *mgo.Database {
 	return gostintDb
 }
 
+// GetAppRoleID returns the instance's App Role ID
 func GetAppRoleID() string {
 	return appRoleID
 }
@@ -96,6 +97,7 @@ func getDbCreds() (string, string, error) {
 	return username, password, nil
 }
 
+// ErrResponse struct for http error responses
 type ErrResponse struct {
 	Err            error `json:"-"` // low-level runtime error
 	HTTPStatusCode int   `json:"-"` // http response status code
@@ -105,11 +107,13 @@ type ErrResponse struct {
 	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
 }
 
+// Render to render a http return code
 func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	render.Status(r, e.HTTPStatusCode)
 	return nil
 }
 
+// ErrInvalidRequest return an invalid http request
 func ErrInvalidRequest(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
@@ -142,17 +146,35 @@ func authenticate(next http.Handler) http.Handler {
 		client.SetToken(token)
 
 		// Verify the token is good
-		_, err = client.Logical().Read("auth/token/lookup-self")
+		tokDetails, err := client.Logical().Read("auth/token/lookup-self")
 		if err != nil {
 			log.Printf("Authentication Failure with Token: %v", err)
 			render.Render(w, r, ErrInvalidRequest(err))
 			return
 		}
-		// log.Printf("tokDetails: %v", tokDetails)
+		// tokJson, _ := json.Marshal(tokDetails)
+		// log.Printf("tokDetails: %s", tokJson)
 
-		ctx := context.WithValue(r.Context(), "authenticated", true)
+		authStruct := AuthStruct{
+			Authenticated: true,
+			PolicyMap:     map[string]bool{},
+		}
+
+		// log.Printf("Data policies: %v", tokDetails.Data["policies"])
+		for _, p := range tokDetails.Data["policies"].([]interface{}) {
+			authStruct.PolicyMap[p.(string)] = true
+		}
+
+		ctx := context.WithValue(r.Context(), job.AuthCtxKey("auth"), authStruct)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// AuthStruct holds authenticated state and policy map from vault for the token
+// placed in context
+type AuthStruct struct {
+	Authenticated bool
+	PolicyMap     map[string]bool
 }
 
 // Routes defines RESTful api middleware and routes.
@@ -176,13 +198,13 @@ func Routes() *chi.Mux {
 
 func main() {
 
-	server_port := 3232
+	serverPort := 3232
 	if os.Getenv("GOSTINT_PORT") != "" {
 		sp, err := strconv.Atoi(os.Getenv("GOSTINT_PORT"))
 		if err != nil {
 			panic(err)
 		}
-		server_port = sp
+		serverPort = sp
 	}
 	log.Printf("Starting gostint...")
 
@@ -209,7 +231,6 @@ func main() {
 		ID:   os.Getenv("GOSTINT_ROLEID"),
 		Name: os.Getenv("GOSTINT_ROLENAME"),
 	}
-	// appRoleID = os.Getenv("GOSTINT_ROLEID")
 
 	// Create RESTful routes
 	router := Routes()
@@ -217,14 +238,9 @@ func main() {
 	// Start job queues
 	jobqueues.Init(gostintDb, &appRole, nodeUUID)
 
-	// TODO: make non TLS an option from command line parameters
-	// log.Fatal(http.ListenAndServe(":3232", router))
-
-	// TODO: parameterise cert & key from command line
-	// log.Fatal(http.ListenAndServeTLS(":3232", "etc/cert.pem", "etc/key.pem", router))
-	log.Printf("gostint listening on https port %d", server_port)
+	log.Printf("gostint listening on https port %d", serverPort)
 	log.Fatal(http.ListenAndServeTLS(
-		fmt.Sprintf(":%d", server_port),
+		fmt.Sprintf(":%d", serverPort),
 		os.Getenv("GOSTINT_SSL_CERT"),
 		os.Getenv("GOSTINT_SSL_KEY"),
 		router,
