@@ -93,5 +93,10 @@ especially around the AppRoles' policies.
 ### Job Sequence Diagram
 This diagram is taken from the original brainstorming for the end-to-end
 secure job submission design - you can see the full document
-[here](https://github.com/goethite/gostint/blob/master/docs/jobsequence.md)
+[here](https://github.com/goethite/gostint/blob/master/docs/jobsequence.md).
+This is now fully implemented between
+[gostint-client](https://github.com/goethite/gostint-client)
+and
+[gostint](https://github.com/goethite/gostint)
+
 ![jobsequence](https://raw.githubusercontent.com/goethite/gostint/master/docs/job_via_intermediary.mermaid.png)
