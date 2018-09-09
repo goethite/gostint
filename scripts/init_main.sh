@@ -14,7 +14,8 @@ apt install -y \
   ca-certificates \
   curl \
   software-properties-common \
-  bats
+  bats \
+  uuid
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 apt-key fingerprint 0EBFCD88
 add-apt-repository \

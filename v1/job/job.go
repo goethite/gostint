@@ -38,13 +38,15 @@ import (
 
 const notfound = "not found"
 
-type JobRouter struct {
+// JobRouter holds config state, e.g. the handle for the database
+type JobRouter struct { // nolint
 	Db *mgo.Database
 }
 
 var jobRouter JobRouter
 
-type JobRequest jobqueues.Job
+// JobRequest localises jobqueues.Job in this module
+type JobRequest jobqueues.Job // nolint
 
 // Bind Binder of decoded request payload
 func (j *JobRequest) Bind(req *http.Request) error {
@@ -61,13 +63,16 @@ func Routes(db *mgo.Database) *chi.Mux {
 		Db: db,
 	}
 	router := chi.NewRouter()
+
 	router.Post("/", postJob)
 	router.Post("/kill/{jobID}", killJob)
 	router.Get("/{jobID}", getJob)
 	router.Delete("/{jobID}", deleteJob)
+
 	return router
 }
 
+// ErrResponse struct for http error responses
 type ErrResponse struct {
 	Err            error `json:"-"` // low-level runtime error
 	HTTPStatusCode int   `json:"-"` // http response status code
@@ -77,11 +82,13 @@ type ErrResponse struct {
 	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
 }
 
+// Render to render a http return code
 func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
 	render.Status(r, e.HTTPStatusCode)
 	return nil
 }
 
+// ErrInvalidRequest return an invalid http request
 func ErrInvalidRequest(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
@@ -91,6 +98,7 @@ func ErrInvalidRequest(err error) render.Renderer {
 	}
 }
 
+// ErrNotFound return a not found error
 func ErrNotFound(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
@@ -100,6 +108,7 @@ func ErrNotFound(err error) render.Renderer {
 	}
 }
 
+// ErrInternalError return internal error
 func ErrInternalError(err error) render.Renderer {
 	return &ErrResponse{
 		Err:            err,
@@ -122,7 +131,12 @@ type getResponse struct {
 	ReturnCode     int       `json:"return_code"`
 }
 
+// AuthCtxKey context key for authentication state & policy map
+type AuthCtxKey string
+
 func getJob(w http.ResponseWriter, req *http.Request) {
+	// ctx := req.Context()
+	// log.Printf("Context: %v", ctx.Value(AuthCtxKey("auth")))
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
 	if jobID == "" {
 		render.Render(w, req, ErrInvalidRequest(errors.New("job ID missing from GET path")))
@@ -289,17 +303,10 @@ func killJob(w http.ResponseWriter, req *http.Request) {
 		render.Render(w, req, ErrInternalError(err))
 		return
 	}
-	// err = job.Kill()
-	// if err != nil {
-	// 	render.Render(w, req, ErrInternalError(err))
-	// 	return
-	// }
 
 	// flag job to be killed - we cant do this directly here because this
 	// instance of gostint may not be the same one that is running the job
-
 	job.UpdateJob(bson.M{
-		// "status":         "stopping",
 		"kill_requested": true,
 	})
 
