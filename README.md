@@ -1,15 +1,17 @@
 # gostint - A Shallow RESTful api for Ansible, Terraform ...
-... and basically anything you would like to run as jobs in docker containers, authenticated with Hashicorp Vault AppRoles with Secret Injection.
+... and basically anything you would like to run as jobs in docker containers.
+Authenticated and end-to-end encrypted with Hashicorp Vault with Secret Injection.
 
-Formally called _goswim_.
 > gostint:
 > : _stint - an allotted amount or piece of work_
 
-Goal is to be a Highly Available and Scaleable API for automation.
+Goal is to be a Highly Available and Scaleable Secure API for automation.
 
 See [Concept Ideas](docs/Concept_Ideas.md)
 
 At this stage this project is a proof-of-concept and under development...
+
+Prebuilt releases are available [here](https://github.com/goethite/gostint/releases).
 
 See [build_test_dev script](./build_test_against_dev.sh) for example starting the gostint docker container with the instances of Vault and MongoDb running in the vagrant container.
 
@@ -22,13 +24,14 @@ JSON jobs used in these tests are in the respective [tests](tests/) files.
 * [Brainstorming job sequence diagrams](docs/jobsequence.md)
 
 ## Features
-* Integrated with Hashicorp Vault AppRole.
-* Secrets in Vault can be referenced in a job request, which are then populated
-and injected into the job's running container.
+* Integrated with Hashicorp Vault's AppRole Authentication, Transit end-to-end
+  encryption, Cubbyhole, Token Wrapping and KV Secrets.
+* Secrets in Vault can be referenced in a job request, which are then injected
+  into the job's running container.
 * Additional content can be flexibly injected into the job container from the
-json request.
+  json request.
 * Can run any job in any required docker image, e.g. Ansible, Terraform, Busybox,
-Powershell, and the versions of the job execution containers can be pinned.
+  Powershell, and the versions of the job execution containers can be pinned.
 * Serialisation queues are dynamic and created on the fly.
 
 ## Usage
@@ -75,7 +78,13 @@ docker run --init -d \
 ```
 
 ### Going HA and Scalable with gostint
-See [gostint-helm](https://github.com/goethite/gostint-helm) for (a work-in-progress) PoC HA deployment of gostint using mongodb, etcd and vault on kubernetes.
+See [gostint-helm](https://github.com/goethite/gostint-helm) for (a work-in-progress)
+PoC HA deployment of gostint using mongodb, etcd and vault on kubernetes.
+
+### gostint-client
+A sister project called [gostint-client](https://github.com/goethite/gostint-client)
+is also available to simplify the client side integrations with Hashicorp Vault
+and drive the [gostint api](https://goethite.github.io/gostint/docs/1100_api_v1_job/).
 
 ## LICENSE - GPLv3
 
