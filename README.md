@@ -1,6 +1,7 @@
 # gostint - A Shallow RESTful api for Ansible, Terraform ...
 ... and basically anything you would like to run as jobs in docker containers.
-Authenticated and end-to-end encrypted with Hashicorp Vault with Secret Injection.
+Authenticated and end-to-end encrypted with Hashicorp Vault with Secret Injection
+* https://goethite.github.io/gostint/
 
 > gostint:
 > : _stint - an allotted amount or piece of work_
