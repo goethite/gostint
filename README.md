@@ -9,7 +9,7 @@ Goal is to be a Highly Available and Scaleable Secure API for automation.
 
 See [Concept Ideas](docs/Concept_Ideas.md)
 
-At this stage this project is a proof-of-concept and under development...
+At this stage this project is a MVP and under development / review...
 
 Prebuilt releases are available [here](https://github.com/goethite/gostint/releases).
 
