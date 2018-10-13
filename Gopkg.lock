@@ -169,13 +169,14 @@
   packages = [
     "api",
     "helper/compressutil",
+    "helper/consts",
     "helper/hclutil",
     "helper/jsonutil",
     "helper/parseutil",
     "helper/strutil"
   ]
-  revision = "533003e27840d9646cb4e7d23b3a113895da1dd0"
-  version = "v0.10.3"
+  revision = "fb601237bfbe4bc16ff679f642248ee8a86e627b"
+  version = "v0.11.3"
 
 [[projects]]
   branch = "master"
@@ -251,6 +252,15 @@
   ]
   revision = "d60099175f88c47cd379c4738d158884749ed235"
   version = "v1.0.1"
+
+[[projects]]
+  name = "github.com/pierrec/lz4"
+  packages = [
+    ".",
+    "internal/xxh32"
+  ]
+  revision = "635575b42742856941dbc767b44905bb9ba083f6"
+  version = "v2.0.7"
 
 [[projects]]
   name = "github.com/pkg/errors"
@@ -342,6 +352,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a82adc9587c991d938722ce8a648f00c790ab459b3549fda214b65432629a40e"
+  inputs-digest = "1b2a11dacafcb1424f79cd2e0074db232570123e6e8fce6296b6d9afc2050bf2"
   solver-name = "gps-cdcl"
   solver-version = 1

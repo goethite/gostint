@@ -38,7 +38,7 @@
 
 [[constraint]]
   name = "github.com/hashicorp/vault"
-  version = "0.10.3"
+  version = "0.11.3"
 
 [[constraint]]
   name = "docker.io/go-docker"
