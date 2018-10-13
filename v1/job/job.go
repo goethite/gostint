@@ -28,6 +28,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gbevan/gostint/apierrors"
 	"github.com/gbevan/gostint/jobqueues"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -72,52 +73,6 @@ func Routes(db *mgo.Database) *chi.Mux {
 	return router
 }
 
-// ErrResponse struct for http error responses
-type ErrResponse struct {
-	Err            error `json:"-"` // low-level runtime error
-	HTTPStatusCode int   `json:"-"` // http response status code
-
-	StatusText string `json:"status"`          // user-level status message
-	AppCode    int64  `json:"code,omitempty"`  // application-specific error code
-	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
-}
-
-// Render to render a http return code
-func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
-	render.Status(r, e.HTTPStatusCode)
-	return nil
-}
-
-// ErrInvalidRequest return an invalid http request
-func ErrInvalidRequest(err error) render.Renderer {
-	return &ErrResponse{
-		Err:            err,
-		HTTPStatusCode: 400,
-		StatusText:     "Invalid job request.",
-		ErrorText:      err.Error(),
-	}
-}
-
-// ErrNotFound return a not found error
-func ErrNotFound(err error) render.Renderer {
-	return &ErrResponse{
-		Err:            err,
-		HTTPStatusCode: 404,
-		StatusText:     "Not Found.",
-		ErrorText:      err.Error(),
-	}
-}
-
-// ErrInternalError return internal error
-func ErrInternalError(err error) render.Renderer {
-	return &ErrResponse{
-		Err:            err,
-		HTTPStatusCode: 500,
-		StatusText:     "Internal Error.",
-		ErrorText:      err.Error(),
-	}
-}
-
 type getResponse struct {
 	ID             string    `json:"_id"`
 	Status         string    `json:"status"`
@@ -135,15 +90,13 @@ type getResponse struct {
 type AuthCtxKey string
 
 func getJob(w http.ResponseWriter, req *http.Request) {
-	// ctx := req.Context()
-	// log.Printf("Context: %v", ctx.Value(AuthCtxKey("auth")))
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
 	if jobID == "" {
-		render.Render(w, req, ErrInvalidRequest(errors.New("job ID missing from GET path")))
+		render.Render(w, req, apierrors.ErrInvalidJobRequest(errors.New("job ID missing from GET path")))
 		return
 	}
 	if !bson.IsObjectIdHex(jobID) {
-		render.Render(w, req, ErrInvalidRequest(errors.New("Invalid job ID (not ObjectIdHex)")))
+		render.Render(w, req, apierrors.ErrInvalidJobRequest(errors.New("Invalid job ID (not ObjectIdHex)")))
 		return
 	}
 	coll := jobRouter.Db.C("queues")
@@ -151,10 +104,10 @@ func getJob(w http.ResponseWriter, req *http.Request) {
 	err := coll.FindId(bson.ObjectIdHex(jobID)).One(&job)
 	if err != nil {
 		if err.Error() == notfound {
-			render.Render(w, req, ErrNotFound(err))
+			render.Render(w, req, apierrors.ErrNotFound(err))
 			return
 		}
-		render.Render(w, req, ErrInternalError(err))
+		render.Render(w, req, apierrors.ErrInternalError(err))
 		return
 	}
 	render.JSON(w, req, getResponse{
@@ -178,40 +131,40 @@ type deleteResponse struct {
 func deleteJob(w http.ResponseWriter, req *http.Request) {
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
 	if jobID == "" {
-		render.Render(w, req, ErrInvalidRequest(errors.New("job ID missing from GET path")))
+		render.Render(w, req, apierrors.ErrInvalidJobRequest(errors.New("job ID missing from GET path")))
 		return
 	}
 	if !bson.IsObjectIdHex(jobID) {
-		render.Render(w, req, ErrInvalidRequest(errors.New("Invalid job ID (not ObjectIdHex)")))
+		render.Render(w, req, apierrors.ErrInvalidJobRequest(errors.New("Invalid job ID (not ObjectIdHex)")))
 		return
 	}
 	coll := jobRouter.Db.C("queues")
 
 	// Get status and ensure job is not running/stopping
-	// TODO: Look at making the find and remove atomic
+	// TODO: Look at making the find-and-remove atomic
 	var job jobqueues.Job
 	err := coll.FindId(bson.ObjectIdHex(jobID)).One(&job)
 	if err != nil {
 		if err.Error() == notfound {
-			render.Render(w, req, ErrNotFound(err))
+			render.Render(w, req, apierrors.ErrNotFound(err))
 			return
 		}
-		render.Render(w, req, ErrInternalError(err))
+		render.Render(w, req, apierrors.ErrInternalError(err))
 		return
 	}
 
 	if job.Status == "running" || job.Status == "stopping" {
-		render.Render(w, req, ErrInvalidRequest(errors.New("Cannot delete a running/stopping job")))
+		render.Render(w, req, apierrors.ErrInvalidJobRequest(errors.New("Cannot delete a running/stopping job")))
 		return
 	}
 
 	err = coll.RemoveId(bson.ObjectIdHex(jobID))
 	if err != nil {
 		if err.Error() == notfound {
-			render.Render(w, req, ErrNotFound(err))
+			render.Render(w, req, apierrors.ErrNotFound(err))
 			return
 		}
-		render.Render(w, req, ErrInternalError(err))
+		render.Render(w, req, apierrors.ErrInternalError(err))
 		return
 	}
 	render.JSON(w, req, deleteResponse{
@@ -231,7 +184,7 @@ type postResponse struct {
 func postJob(w http.ResponseWriter, req *http.Request) {
 	data := &JobRequest{}
 	if err := render.Bind(req, data); err != nil {
-		render.Render(w, req, ErrInvalidRequest(err))
+		render.Render(w, req, apierrors.ErrInvalidJobRequest(err))
 		return
 	}
 	job := data
@@ -242,7 +195,7 @@ func postJob(w http.ResponseWriter, req *http.Request) {
 	jobRequest.ID = newID
 
 	if jobRequest.WrapSecretID == "" {
-		render.Render(w, req, ErrInvalidRequest(errors.New("AppRole SecretID's Wrapping Token must be present in the job request")))
+		render.Render(w, req, apierrors.ErrInvalidJobRequest(errors.New("AppRole SecretID's Wrapping Token must be present in the job request")))
 		return
 	}
 
@@ -251,13 +204,13 @@ func postJob(w http.ResponseWriter, req *http.Request) {
 		Address: os.Getenv("VAULT_ADDR"),
 	})
 	if err != nil {
-		render.Render(w, req, ErrInternalError(fmt.Errorf("Failed create vault client api: %s", err)))
+		render.Render(w, req, apierrors.ErrInternalError(fmt.Errorf("Failed create vault client api: %s", err)))
 		return
 	}
 	client.SetToken(job.CubbyToken)
 	resp, err := client.Logical().Read(job.CubbyPath)
 	if err != nil {
-		render.Render(w, req, ErrInternalError(fmt.Errorf("Failed to read cubbyhole from vault: %s", err)))
+		render.Render(w, req, apierrors.ErrInternalError(fmt.Errorf("Failed to read cubbyhole from vault: %s", err)))
 		return
 	}
 	job.Payload = resp.Data["payload"].(string)
@@ -285,11 +238,11 @@ func killJob(w http.ResponseWriter, req *http.Request) {
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
 	log.Printf("killJob ID: %s", jobID)
 	if jobID == "" {
-		render.Render(w, req, ErrInvalidRequest(errors.New("job ID missing from GET path")))
+		render.Render(w, req, apierrors.ErrInvalidJobRequest(errors.New("job ID missing from GET path")))
 		return
 	}
 	if !bson.IsObjectIdHex(jobID) {
-		render.Render(w, req, ErrInvalidRequest(errors.New("Invalid job ID (not ObjectIdHex)")))
+		render.Render(w, req, apierrors.ErrInvalidJobRequest(errors.New("Invalid job ID (not ObjectIdHex)")))
 		return
 	}
 	coll := jobRouter.Db.C("queues")
@@ -297,10 +250,10 @@ func killJob(w http.ResponseWriter, req *http.Request) {
 	err := coll.FindId(bson.ObjectIdHex(jobID)).One(&job)
 	if err != nil {
 		if err.Error() == notfound {
-			render.Render(w, req, ErrNotFound(err))
+			render.Render(w, req, apierrors.ErrNotFound(err))
 			return
 		}
-		render.Render(w, req, ErrInternalError(err))
+		render.Render(w, req, apierrors.ErrInternalError(err))
 		return
 	}
 

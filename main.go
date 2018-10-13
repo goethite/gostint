@@ -28,8 +28,11 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/gbevan/gostint/apierrors"
+	"github.com/gbevan/gostint/health"
 	"github.com/gbevan/gostint/jobqueues"
 	"github.com/gbevan/gostint/pingclean"
+	"github.com/gbevan/gostint/v1/health"
 	"github.com/gbevan/gostint/v1/job"
 	"github.com/globalsign/mgo"
 	"github.com/go-chi/chi"
@@ -97,37 +100,18 @@ func getDbCreds() (string, string, error) {
 	return username, password, nil
 }
 
-// ErrResponse struct for http error responses
-type ErrResponse struct {
-	Err            error `json:"-"` // low-level runtime error
-	HTTPStatusCode int   `json:"-"` // http response status code
-
-	StatusText string `json:"status"`          // user-level status message
-	AppCode    int64  `json:"code,omitempty"`  // application-specific error code
-	ErrorText  string `json:"error,omitempty"` // application-level error message, for debugging
-}
-
-// Render to render a http return code
-func (e *ErrResponse) Render(w http.ResponseWriter, r *http.Request) error {
-	render.Status(r, e.HTTPStatusCode)
-	return nil
-}
-
-// ErrInvalidRequest return an invalid http request
-func ErrInvalidRequest(err error) render.Renderer {
-	return &ErrResponse{
-		Err:            err,
-		HTTPStatusCode: 400,
-		StatusText:     "Invalid request.",
-		ErrorText:      err.Error(),
-	}
-}
-
 func authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Allow heath data without authenticating
+		if r.Method == "GET" && r.URL.Path == "/v1/api/health" {
+			ctx := context.WithValue(r.Context(), job.AuthCtxKey("auth"), nil)
+			next.ServeHTTP(w, r.WithContext(ctx))
+			return
+		}
+
 		if _, ok := r.Header["X-Auth-Token"]; !ok {
 			log.Println("Error: Missing X-Auth-Token")
-			render.Render(w, r, ErrInvalidRequest(errors.New("Missing X-Auth-Token")))
+			render.Render(w, r, apierrors.ErrInvalidRequest(errors.New("Missing X-Auth-Token")))
 			return
 		}
 		token := r.Header["X-Auth-Token"][0]
@@ -139,7 +123,7 @@ func authenticate(next http.Handler) http.Handler {
 		if err != nil {
 			errmsg := fmt.Sprintf("Failed create vault client api: %s", err)
 			log.Println(errmsg)
-			render.Render(w, r, ErrInvalidRequest(fmt.Errorf(errmsg)))
+			render.Render(w, r, apierrors.ErrInvalidRequest(fmt.Errorf(errmsg)))
 			return
 		}
 
@@ -149,7 +133,7 @@ func authenticate(next http.Handler) http.Handler {
 		tokDetails, err := client.Logical().Read("auth/token/lookup-self")
 		if err != nil {
 			log.Printf("Authentication Failure with Token: %v", err)
-			render.Render(w, r, ErrInvalidRequest(err))
+			render.Render(w, r, apierrors.ErrInvalidRequest(err))
 			return
 		}
 		// tokJson, _ := json.Marshal(tokDetails)
@@ -191,6 +175,7 @@ func Routes() *chi.Mux {
 
 	router.Route("/v1", func(r chi.Router) {
 		r.Mount("/api/job", job.Routes(GetDb()))
+		r.Mount("/api/health", healthApi.Routes(GetDb()))
 	})
 
 	return router
@@ -234,6 +219,9 @@ func main() {
 
 	// Create RESTful routes
 	router := Routes()
+
+	// initialise health state
+	health.Init(gostintDb, nodeUUID)
 
 	// Start job queues
 	jobqueues.Init(gostintDb, &appRole, nodeUUID)
