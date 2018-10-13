@@ -30,5 +30,5 @@ release:
     owner: goethite
     name: gostint
   draft: false
-  prerelease: true
+  prerelease: false
   disable: false
