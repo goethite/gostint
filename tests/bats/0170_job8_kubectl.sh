@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-@test "Submitting job8 kubectl ping should return json" {
+@test "Submitting job8 kubectl help should return json" {
   # Get a default token for the api post authentication
   TOKEN=$(vault write -f auth/token/create policies=default -format=json | jq .auth.client_token -r)
   echo "$TOKEN"
