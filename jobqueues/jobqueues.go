@@ -39,6 +39,7 @@ import (
 	"docker.io/go-docker/api/types"
 	"docker.io/go-docker/api/types/container"
 	"github.com/gbevan/gostint/approle"
+	"github.com/gbevan/gostint/health"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/hashicorp/vault/api"
@@ -119,66 +120,68 @@ func Init(db *mgo.Database, appRole *AppRole, nodeUUID string) {
 
 	// start go routine to loop on the queues collection for new work
 	// Qname defines the FIFO queue.
-	// Provide a Wake channel for immediate pull ???
 	go requestHandler()
 
 	go killHandler()
 }
 
 func requestHandler() {
+	// TODO: Provide a Wake channel for immediate pull ???
 	db := jobQueues.Db
 	c := db.C("queues")
 
 	for {
-		var queues []string
-		err := c.Find(bson.M{}).Distinct("qname", &queues)
-		if err != nil {
-			log.Printf("Error: Find queues failed: %s\n", err)
-		}
-
-		for _, q := range queues {
-			job := Job{}
-
-			chg := mgo.Change{
-				Update: bson.M{"$set": bson.M{
-					"status": "running",
-				}},
-				ReturnNew: false,
+		if health.GetState() == "active" {
+			var queues []string
+			err := c.Find(bson.M{}).Distinct("qname", &queues)
+			if err != nil {
+				log.Printf("Error: Find queues failed: %s\n", err)
 			}
 
-			statusCond := []bson.M{}
-			statusCond = append(statusCond, bson.M{"status": "queued"})
-			statusCond = append(statusCond, bson.M{"status": "running"})
+			for _, q := range queues {
+				job := Job{}
 
-			_, err := c.Find(bson.M{"qname": q, "$or": statusCond}).Sort("submitted").Limit(1).Apply(chg, &job)
-			if err != nil {
-				if err.Error() == "not found" {
-					continue
+				chg := mgo.Change{
+					Update: bson.M{"$set": bson.M{
+						"status": "running",
+					}},
+					ReturnNew: false,
 				}
-				log.Printf("Error: Pop from queue %s failed: %v\n", q, err)
-			}
 
-			// NOTE: if the returned job has status = "queued", then this has just
-			// been atomically pop'd from the FIFO stack
-			if job.Status != "queued" {
-				break
-			}
+				statusCond := []bson.M{}
+				statusCond = append(statusCond, bson.M{"status": "queued"})
+				statusCond = append(statusCond, bson.M{"status": "running"})
 
-			// set node uuid that we are running on
-			chg2 := mgo.Change{
-				Update: bson.M{"$set": bson.M{
-					"node_uuid": jobQueues.NodeUUID,
-					"started":   time.Now(),
-				}},
-				ReturnNew: true,
-			}
-			_, err = c.FindId(job.ID).Apply(chg2, &job)
-			if err != nil {
-				log.Printf("Error: Update to node uuid on queue %s failed: %v\n", q, err)
-			}
+				_, err := c.Find(bson.M{"qname": q, "$or": statusCond}).Sort("submitted").Limit(1).Apply(chg, &job)
+				if err != nil {
+					if err.Error() == "not found" {
+						continue
+					}
+					log.Printf("Error: Pop from queue %s failed: %v\n", q, err)
+				}
 
-			go job.runRequest()
-		}
+				// NOTE: if the returned job has status = "queued", then this has just
+				// been atomically pop'd from the FIFO stack
+				if job.Status != "queued" {
+					break
+				}
+
+				// set node uuid that we are running on
+				chg2 := mgo.Change{
+					Update: bson.M{"$set": bson.M{
+						"node_uuid": jobQueues.NodeUUID,
+						"started":   time.Now(),
+					}},
+					ReturnNew: true,
+				}
+				_, err = c.FindId(job.ID).Apply(chg2, &job)
+				if err != nil {
+					log.Printf("Error: Update to node uuid on queue %s failed: %v\n", q, err)
+				}
+
+				go job.runRequest()
+			}
+		} // if state active
 
 		time.Sleep(1000 * time.Millisecond)
 	}

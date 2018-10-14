@@ -20,6 +20,7 @@ along with gostint.  If not, see <https://www.gnu.org/licenses/>.
 package healthApi
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gbevan/gostint/apierrors"
@@ -47,10 +48,26 @@ func Routes(db *mgo.Database) *chi.Mux {
 }
 
 func getHealth(w http.ResponseWriter, req *http.Request) {
-	h, err := health.GetState()
+	req.ParseForm()
+
+	h, err := health.GetHealth()
 	if err != nil {
 		render.Render(w, req, apierrors.ErrInternalError(err))
 		return
 	}
+
+	// request for individual value ?k=field
+	if key, ok := req.Form["k"]; ok {
+		if len(key) > 0 {
+			if val, ok := (*h)[key[0]]; ok {
+				render.PlainText(w, req, val)
+				return
+			}
+		}
+		render.Render(w, req, apierrors.ErrInvalidRequest(errors.New("Invalid health metric key")))
+		return
+	}
+
+	// return all health metrics
 	render.JSON(w, req, h)
 }

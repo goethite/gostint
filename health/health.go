@@ -20,6 +20,12 @@ along with gostint.  If not, see <https://www.gnu.org/licenses/>.
 package health
 
 import (
+	"log"
+	"os"
+	"os/signal"
+	"strconv"
+	"sync"
+
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	. "github.com/visionmedia/go-debug" // nolint
@@ -29,32 +35,61 @@ var debug = Debug("health")
 
 // State holds the gostint nodes health and state
 type State struct {
-	State        string `json:"state"`
-	AllJobs      int    `json:"all_jobs"`
-	QueuedJobs   int    `json:"queued_jobs"`
-	RunningJobs  int    `json:"running_jobs"`
-	NotAuthJobs  int    `json:"notauthorised_jobs"`
-	StoppingJobs int    `json:"stopping_jobs"`
-	SuccessJobs  int    `json:"success_jobs"`
-	FailedJobs   int    `json:"failed_jobs"`
-	UnknownJobs  int    `json:"unknown_jobs"`
-	db           *mgo.Database
-	nodeUUID     string
+	State    string
+	db       *mgo.Database
+	nodeUUID string
 }
 
-var state State
+var (
+	state      State
+	stateMutex sync.Mutex
+)
 
 // Init initialises
 func Init(db *mgo.Database, nodeUUID string) {
+	stateMutex.Lock()
 	state = State{
 		State:    "active",
 		db:       db,
 		nodeUUID: nodeUUID,
 	}
+	stateMutex.Unlock()
+
+	// SIGINT Handler to drain the node for shutdown
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt)
+	go func() {
+		for {
+			sig := <-sigs
+			switch sig {
+			case os.Interrupt:
+				log.Println("SIGINT received, draining node...")
+				SetState("draining")
+			}
+		}
+	}()
 }
 
-// GetState Returns the gostint health status
-func GetState() (*State, error) {
+// SetState sets the node's State
+func SetState(s string) {
+	stateMutex.Lock()
+	state.State = s
+	stateMutex.Unlock()
+}
+
+// GetState Returns the gostint node's state
+func GetState() string {
+	stateMutex.Lock()
+	s := state.State
+	stateMutex.Unlock()
+	return s
+}
+
+// GetHealth Returns the gostint health status
+func GetHealth() (*map[string]string, error) {
+	m := make(map[string]string)
+	m["state"] = GetState()
+
 	db := state.db
 	c := db.C("queues")
 
@@ -62,15 +97,16 @@ func GetState() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	state.AllJobs = num
+	m["all_jobs"] = strconv.Itoa(num)
 
+	// TODO: replace all below with consolidated MapReduce
 	num, err = c.Find(bson.M{
 		"status": "queued",
 	}).Count()
 	if err != nil {
 		return nil, err
 	}
-	state.QueuedJobs = num
+	m["queued_jobs"] = strconv.Itoa(num)
 
 	num, err = c.Find(bson.M{
 		"status": "running",
@@ -78,7 +114,7 @@ func GetState() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	state.RunningJobs = num
+	m["running_jobs"] = strconv.Itoa(num)
 
 	num, err = c.Find(bson.M{
 		"status": "notauthorised",
@@ -86,7 +122,7 @@ func GetState() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	state.NotAuthJobs = num
+	m["notauthorised_jobs"] = strconv.Itoa(num)
 
 	num, err = c.Find(bson.M{
 		"status": "stopping",
@@ -94,7 +130,7 @@ func GetState() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	state.StoppingJobs = num
+	m["stopping_jobs"] = strconv.Itoa(num)
 
 	num, err = c.Find(bson.M{
 		"status": "success",
@@ -102,7 +138,7 @@ func GetState() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	state.SuccessJobs = num
+	m["success_jobs"] = strconv.Itoa(num)
 
 	num, err = c.Find(bson.M{
 		"status": "failed",
@@ -110,7 +146,7 @@ func GetState() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	state.FailedJobs = num
+	m["failed_jobs"] = strconv.Itoa(num)
 
 	num, err = c.Find(bson.M{
 		"status": "unknown",
@@ -118,12 +154,7 @@ func GetState() (*State, error) {
 	if err != nil {
 		return nil, err
 	}
-	state.UnknownJobs = num
+	m["unknown_jobs"] = strconv.Itoa(num)
 
-	return &state, nil
-}
-
-// SetState sets the node's State
-func SetState(s string) {
-	state.State = s
+	return &m, nil
 }
