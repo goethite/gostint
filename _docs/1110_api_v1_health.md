@@ -8,4 +8,3 @@ classes: wide
 |-------|--------------------------------------|
 | GET / | Get health metrics and pod state as JSON  |
 | GET /?k={field} | return individual metric field as plaintext  |
-| DELETE /{id} | Delete the job by {id}        |
