@@ -4,9 +4,11 @@ classes: wide
 toc: true
 ---
 ## GoStint
-GoStint is a [proof-of-concept] job submission and execution API where all jobs run in their
-own docker containers.  All authentication, encryption of the secure protocol
-are implemented via integration with Hashicorp Vault - utilising vault features:
+GoStint is a [MVP] job submission and execution API where all jobs run in their
+own docker containers.  Authentication, end-to-end encryption and
+tamper-proofing of the secure protocol
+are implemented via integration with [Hashicorp Vault](https://www.vaultproject.io/),
+utilising vault features:
 
 * AppRole Authentication
 * Token Generation
@@ -45,7 +47,7 @@ for each job. Here are some examples:
   can be ensured to be run in production with that exact same version (including any/all
   dependencies).
 * Terraform infrastructure-as-code projects, again run in a container with the exact
-  same tested version of terraform.
+  same tested version of Terraform.
 * Kubectl / Helm charts with a KUBECONFIG injected from Vault and ensured to run
   with the correct versions of the tools.
 * Powershell scripts (in Ubuntu containers) for windows automations.
@@ -73,7 +75,7 @@ container is instantiated and placed in the container either as `/secrets.yml` o
 `/secrets.json`  (depending on `-secret-filetype` - default is `yaml`).
 
 ### A Helm Chart for Kubernetes
-A [proof-of-concept] [Helm Chart](https://github.com/goethite/gostint-helm)
+A demonstrator [Helm Chart](https://github.com/goethite/gostint-helm)
 is available to deploy GoStint, Vault with etcd
 backend, and MongoDB - as a self-contained automation API - for demonstration
 purposes.
@@ -82,10 +84,7 @@ Note: The gostint pods are run in "privileged" mode to enable
 support for docker-in-docker running of the containerised jobs.
 
 ### Project Status
-It is early days for this project and it is still considered a proof-of-concept,
-as such I would certainly not recommend it for production at this stage.
-More work needs to be done around reviewing and securing the api protocols,
-especially around the AppRoles' policies.
+It is early days for this project and it is still considered a MVP.
 
 ### Job States
 ![jobstates](https://raw.githubusercontent.com/goethite/gostint/master/docs/jobstates.mermaid.png)

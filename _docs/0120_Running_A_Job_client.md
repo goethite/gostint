@@ -22,8 +22,14 @@ Usage of ./gostint-client:
     	Enable debugging
   -entrypoint string
     	JSON array of string parts defining the container's entrypoint, e.g.: '["ansible"]', overrides value in job-json
+  -env-vars string
+    	JSON array of strings providing envronment variables to be passed to the job container, e.g.: '["MYVAR=value"]'
+  -gostint-approle string
+    	Vault App Role Name of GoStint to run job on (can read file e.g. '@gostint_role.txt') (default "gostint-role")
   -image string
     	Docker image to run job within, overrides value in job-json
+  -image-pull-policy string
+    	Docker image pull policy: IfNotPresent or Always (default "IfNotPresent")
   -job-json string
     	JSON Job request
   -poll-interval int
@@ -41,13 +47,15 @@ Usage of ./gostint-client:
   -url string
     	GoStint API URL, e.g. https://somewhere:3232
   -vault-roleid string
-    	Vault App Role ID (can read file e.g. '@role_id.txt')
+    	Requestor's Vault App Role ID (can read file e.g. '@role_id.txt')
   -vault-secretid string
-    	Vault App Secret ID (can read file e.g. '@secret_id.txt')
+    	Requestor's Vault App Secret ID (can read file e.g. '@secret_id.txt')
   -vault-token string
-    	Vault token - used instead of App Role (can read file e.g. '@token.txt')
+    	Requestor's Vault token - used instead of App Role (can read file e.g. '@token.txt')
   -vault-url string
     	Vault API URL, e.g. https://your-vault:8200 - defaults to env var VAULT_ADDR
+  -wait
+    	Wait for job to complete before returning final status (default true)
 ```
 
 ### Debugging with -debug option

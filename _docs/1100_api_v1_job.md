@@ -1,10 +1,10 @@
 ---
-title: API v1/job
+title: API v1/api/job
 classes: wide
 #toc: true
 ---
 
-|v1/job | Description                          |
+|v1/api/job | Description                          |
 |-------|--------------------------------------|
 | POST / | Post a new job to the queue         |
 | POST /kill/{id} | Request job {id} be killed |
@@ -25,6 +25,7 @@ The job payload encrypted and placed in the cubbyhole can contain:
 | Parameter | |
 |-----------|-|
 | container_image | Image name in DockerHub to run |
+| image_pull_policy | Always / IfNotPresent |
 | content | base64 encoded tar.gz of injectable content, to overlay on the container prior to execution |
 | entrypoint | Array of strings defining the entrypoint in the container, see `docker run`|
 | run | Array of strings defining the command to run, see `docker run`|
