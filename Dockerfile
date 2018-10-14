@@ -27,6 +27,8 @@ COPY v1 ./v1/
 COPY approle ./approle/
 COPY pingclean ./pingclean/
 COPY jobqueues ./jobqueues/
+COPY apierrors ./apierrors/
+COPY health ./health/
 
 RUN \
   go get github.com/golang/dep/cmd/dep && \
