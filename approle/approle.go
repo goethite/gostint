@@ -45,7 +45,7 @@ func Authenticate(appRoleID string, wrapSecretID string) (string, *api.Client, e
 	// Unwrap the wrapping token to get the SecretID
 	secret, err := client.Logical().Unwrap(wrapSecretID)
 	if err != nil {
-		return "", &api.Client{}, fmt.Errorf("Request failed to unwrap the token to retrieve the SecretID - SECURITY ALERT: THIS REQUEST MAY HAVE BEEN TAMPERED WITH err: %s", err)
+		return "", &api.Client{}, fmt.Errorf("Request failed to unwrap the token to retrieve the SecretID - POSSIBLE SECURITY/INTERCEPTION ALERT!!!: THIS REQUEST MAY HAVE BEEN TAMPERED WITH, error: %s", err)
 	}
 	secretID := secret.Data["secret_id"]
 
