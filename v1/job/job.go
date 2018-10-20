@@ -210,7 +210,7 @@ func postJob(w http.ResponseWriter, req *http.Request) {
 	client.SetToken(job.CubbyToken)
 	resp, err := client.Logical().Read(job.CubbyPath)
 	if err != nil {
-		render.Render(w, req, apierrors.ErrInternalError(fmt.Errorf("Failed to read cubbyhole from vault: %s", err)))
+		render.Render(w, req, apierrors.ErrInternalError(fmt.Errorf("POSSIBLE SECURITY/INTERCEPTION ALERT!!! Failed to read cubbyhole from vault, error: %s", err)))
 		return
 	}
 	job.Payload = resp.Data["payload"].(string)
