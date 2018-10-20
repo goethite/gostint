@@ -39,6 +39,7 @@ import (
 	"docker.io/go-docker/api/types"
 	"docker.io/go-docker/api/types/container"
 	"github.com/gbevan/gostint/approle"
+	"github.com/gbevan/gostint/cleanup"
 	"github.com/gbevan/gostint/health"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
@@ -123,6 +124,9 @@ func Init(db *mgo.Database, appRole *AppRole, nodeUUID string) {
 	go requestHandler()
 
 	go killHandler()
+
+	// Cleanup unused docker images
+	go cleanup.Images()
 }
 
 func requestHandler() {
@@ -648,7 +652,13 @@ func (job *Job) runContainer() error {
 		job.ContainerImage = fmt.Sprintf("%s:latest", job.ContainerImage)
 	}
 
-	imgRef := fmt.Sprintf("docker.io/%s", job.ContainerImage)
+	var imgRef string
+	if strings.Contains(job.ContainerImage, "/") {
+		// TODO: Support logins
+		imgRef = job.ContainerImage
+	} else {
+		imgRef = fmt.Sprintf("docker.io/%s", job.ContainerImage)
+	}
 
 	// Get list of images on host
 	imgList, err := cli.ImageList(ctx, types.ImageListOptions{
@@ -658,9 +668,11 @@ func (job *Job) runContainer() error {
 		return err
 	}
 	imgAlreadyPulled := false
+	imgID := ""
 	for _, img := range imgList {
 		if len(img.RepoTags) > 0 && img.RepoTags[0] == job.ContainerImage {
 			imgAlreadyPulled = true
+			imgID = img.ID
 		}
 	}
 
@@ -678,6 +690,22 @@ func (job *Job) runContainer() error {
 	} else {
 		log.Printf("Image %s already pulled & image_pull_policy: %s", job.ContainerImage, job.ImagePullPolicy)
 	}
+
+	if imgID == "" {
+		// Get image ID
+		imgList, err = cli.ImageList(ctx, types.ImageListOptions{
+			All: true,
+		})
+		if err != nil {
+			return err
+		}
+		for _, img := range imgList {
+			if len(img.RepoTags) > 0 && img.RepoTags[0] == job.ContainerImage {
+				imgID = img.ID
+			}
+		}
+	}
+	cleanup.ImageUsed(imgID, time.Now())
 
 	cfg := container.Config{
 		Image: job.ContainerImage,
