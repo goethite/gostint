@@ -1,0 +1,7 @@
+---
+# Vault secret refrences
+secret_refs:
+  - "content_meta_secret_1@kv/data/my-secret.my-value"
+  - "content_meta_field_1@kv/data/my-form.field1"
+  - "content_meta_field_2@kv/data/my-form.field2"
+  - "content_meta_field_3@kv/data/my-form.field3"

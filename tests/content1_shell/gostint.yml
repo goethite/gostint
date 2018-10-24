@@ -1,1 +1,8 @@
 container_image: busybox
+
+# Vault secret refrences
+secret_refs:
+  - "meta_secret_1@kv/data/my-secret.my-value"
+  - "meta_field_1@kv/data/my-form.field1"
+  - "meta_field_2@kv/data/my-form.field2"
+  - "meta_field_3@kv/data/my-form.field3"
