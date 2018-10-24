@@ -89,7 +89,7 @@
   [ "$status" == "success" ]
 }
 
-@test "Should have final output in json" {
+@test "Should have image requested secret in final output" {
   R="$(cat $BATS_TMPDIR/job10.final.json)"
 
   echo $R | jq .output -r
@@ -97,4 +97,24 @@
   output="$(echo $R | jq .output -r)"
 
   echo "$output" | grep "image_meta_secret_1: s3cr3t"
+}
+
+@test "Should have content requested secret in final output" {
+  R="$(cat $BATS_TMPDIR/job10.final.json)"
+
+  echo $R | jq .output -r
+  echo "R:$R" >&2
+  output="$(echo $R | jq .output -r)"
+
+  echo "$output" | grep "content_meta_secret_1: s3cr3t"
+}
+
+@test "Should have payload requested secret in final output" {
+  R="$(cat $BATS_TMPDIR/job10.final.json)"
+
+  echo $R | jq .output -r
+  echo "R:$R" >&2
+  output="$(echo $R | jq .output -r)"
+
+  echo "$output" | grep "payload_secret: s3cr3t"
 }

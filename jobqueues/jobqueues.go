@@ -273,7 +273,6 @@ func (job *Job) resolveContentMeta() (*Meta, error) {
 			// Put content reader in job for later copy into container as tar reader
 			rdr, err := gzip.NewReader(strings.NewReader(string(data)))
 			job.contentRdr = rdr
-			log.Printf("job.contentRdr: %v", job.contentRdr)
 			if err != nil {
 				return nil, fmt.Errorf("Failed to unzip content: %s", err)
 			}
@@ -412,7 +411,6 @@ func (job *Job) createDockerContainer(ctx *context.Context, cli *client.Client, 
 }
 
 func (job *Job) metaFromDockerContainer(ctx *context.Context, cli *client.Client, containerID string, srcPath string) (map[interface{}]interface{}, error) {
-	log.Printf("metaFromDockerContainer srcPath: %s", srcPath)
 	rdr, _, err := cli.CopyFromContainer(*ctx, containerID, srcPath)
 	defer func() {
 		if rdr != nil {
@@ -423,14 +421,12 @@ func (job *Job) metaFromDockerContainer(ctx *context.Context, cli *client.Client
 		log.Printf("metaFromDockerContainer err: %v", err)
 		return nil, nil
 	}
-	log.Printf("metaFromDockerContainer rdr: %v", rdr)
 
 	// rdr here is for a TAR ball - need to extract the file then UnMarshal
 	tr := tar.NewReader(rdr)
 	var bufMeta bytes.Buffer
 	for {
 		hdr, err2 := tr.Next()
-		log.Printf("metaFromDockerContainer hdr: %v", hdr)
 		if err2 == io.EOF {
 			break // End of archive
 		}
@@ -443,12 +439,6 @@ func (job *Job) metaFromDockerContainer(ctx *context.Context, cli *client.Client
 			}
 		}
 	}
-	// bufMeta := bufMeta.String()
-
-	// bufMeta, err := ioutil.ReadAll(rdr)
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	// parse meta yaml
 	meta := make(map[interface{}]interface{})
@@ -589,11 +579,9 @@ func (job *Job) runRequest() {
 		return
 	}
 
-	log.Printf("job before update: %v", job.contentRdr)
 	job.UpdateJob(bson.M{
 		"container_id": containerBody.ID,
 	})
-	log.Printf("job after update: %v", job.contentRdr)
 
 	log.Printf("Created container ID: %s", containerBody.ID)
 
@@ -609,20 +597,6 @@ func (job *Job) runRequest() {
 			log.Printf("Error: removing container: %s", errD)
 		}
 	}()
-
-	// job.Content = payloadObj.Content
-	// job.EntryPoint = payloadObj.EntryPoint
-	// job.Run = payloadObj.Run
-	// job.WorkingDir = payloadObj.WorkingDir
-	// job.EnvVars = payloadObj.EnvVars
-	// job.SecretFileType = payloadObj.SecretFileType
-	// job.ContOnWarnings = payloadObj.ContOnWarnings
-
-	// resolve image
-	// if payloadObj.ContainerImage != "" {
-	// 	job.ContainerImage = payloadObj.ContainerImage
-	// }
-	// job.ImagePullPolicy = payloadObj.ImagePullPolicy
 
 	if job.SecretFileType == "" {
 		job.SecretFileType = "yaml"
@@ -641,20 +615,13 @@ func (job *Job) runRequest() {
 
 	// Merge fields from layered meta sources (image, content, payload)
 	srs, ok := imageMeta["secret_refs"].([]interface{})
-	log.Printf("image SecretRefs: %v", srs)
 	if ok {
-		// job.SecretRefs = sr.([]interface{})
 		for _, sr := range srs {
-			log.Printf("sr: %v", sr)
 			job.SecretRefs = append(job.SecretRefs, sr.(string))
 		}
 	}
-	// TODO: TEST Content secretrefs merge
-	log.Printf("contentMeta.SecretRefs: %v", contentMeta.SecretRefs)
 	job.SecretRefs = append(job.SecretRefs, contentMeta.SecretRefs...)
-	log.Printf("payloadObj.SecretRefs: %v", payloadObj.SecretRefs)
 	job.SecretRefs = append(job.SecretRefs, payloadObj.SecretRefs...)
-	log.Printf("job.SecretRefs: %v", job.SecretRefs)
 
 	if job.ImagePullPolicy != "IfNotPresent" && job.ImagePullPolicy != "Always" {
 		job.UpdateJob(bson.M{
@@ -778,7 +745,6 @@ func (job *Job) runRequest() {
 		}
 		secrets[secVarName] = (data.(map[string]interface{}))[secKey].(string)
 	} // for SecretRefs
-	log.Printf("secrets: %v", secrets)
 
 	// Create tar rdr for /secrets.yml|json in container
 	var entries []TarEntry
@@ -830,103 +796,6 @@ func (job *Job) runRequest() {
 		return
 	}
 
-	// Handle Content
-	// if job.Content != "" {
-	// 	parts := strings.Split(job.Content, ",")
-	// 	if len(parts) != 2 {
-	// 		job.UpdateJob(bson.M{
-	// 			"status": "failed",
-	// 			"ended":  time.Now(),
-	// 			"output": fmt.Sprintf("Failed to parse invalid content"),
-	// 		})
-	// 		return
-	// 	}
-	// 	// decode content base64
-	// 	data, err2 := base64.StdEncoding.DecodeString(parts[1])
-	// 	if err2 != nil {
-	// 		job.UpdateJob(bson.M{
-	// 			"status": "failed",
-	// 			"ended":  time.Now(),
-	// 			"output": fmt.Sprintf("Failed to decode content base64: %s", err2),
-	// 		})
-	// 		return
-	// 	}
-	// 	switch parts[0] {
-	// 	case "targz":
-	// 		// Put content reader in job for later copy into container as tar reader
-	// 		job.contentRdr, err = gzip.NewReader(strings.NewReader(string(data)))
-	// 		if err != nil {
-	// 			job.UpdateJob(bson.M{
-	// 				"status": "failed",
-	// 				"ended":  time.Now(),
-	// 				"output": fmt.Sprintf("Failed to unzip content: %s", err),
-	// 			})
-	// 			return
-	// 		}
-	// 		break
-	// 	default:
-	// 		job.UpdateJob(bson.M{
-	// 			"status": "failed",
-	// 			"ended":  time.Now(),
-	// 			"output": fmt.Sprintf("Failed to extract content, unsupported archive format: %s", parts[0]),
-	// 		})
-	// 		return
-	// 	}
-	//
-	// 	// Look for gostint.yml in content
-	// 	meta := Meta{}
-	// 	tempRdr, err2 := gzip.NewReader(strings.NewReader(string(data)))
-	// 	if err2 != nil {
-	// 		job.UpdateJob(bson.M{
-	// 			"status": "failed",
-	// 			"ended":  time.Now(),
-	// 			"output": fmt.Sprintf("Failed to unzip content to rdr for gostint.yaml: %s", err2),
-	// 		})
-	// 		return
-	// 	}
-	// 	tr := tar.NewReader(tempRdr)
-	// 	var bufMeta bytes.Buffer
-	// 	for {
-	// 		hdr, err2 := tr.Next()
-	// 		if err2 == io.EOF {
-	// 			break // End of archive
-	// 		}
-	// 		if err2 != nil {
-	// 			job.UpdateJob(bson.M{
-	// 				"status": "failed",
-	// 				"ended":  time.Now(),
-	// 				"output": fmt.Sprintf("Failed content tar: %s", err2),
-	// 			})
-	// 			return
-	// 		}
-	// 		if hdr.Name == "./gostint.yml" {
-	// 			if _, err = io.Copy(&bufMeta, tr); err != nil {
-	// 				job.UpdateJob(bson.M{
-	// 					"status": "failed",
-	// 					"ended":  time.Now(),
-	// 					"output": fmt.Sprintf("Failed extracting gostint.yml from tar: %s", err),
-	// 				})
-	// 				return
-	// 			}
-	// 		}
-	//
-	// 		// parse gostint.yml
-	// 		err = yaml.Unmarshal(bufMeta.Bytes(), &meta)
-	// 		if err != nil {
-	// 			job.UpdateJob(bson.M{
-	// 				"status": "failed",
-	// 				"ended":  time.Now(),
-	// 				"output": fmt.Sprintf("Failed parsing yaml in gostint.yml: %s", err),
-	// 			})
-	// 			return
-	// 		}
-	// 	} // for
-	//
-	// 	if job.ContainerImage == "" {
-	// 		job.ContainerImage = meta.ContainerImage
-	// 	}
-	// }
-
 	if job.KillRequested {
 		job.UpdateJob(bson.M{
 			"status": "failed",
@@ -954,145 +823,26 @@ type Meta struct {
 }
 
 func (job *Job) runContainer(ctx *context.Context, cli *client.Client, containerID string) error {
-	// ctx := context.Background()
-	// cli, err := client.NewEnvClient()
-	// if err != nil {
-	// 	return err
-	// }
-	//
-	// if job.ContainerImage == "" {
-	// 	errmsg := "Error job.ContainerImage is empty"
-	// 	log.Println(errmsg)
-	// 	return errors.New(errmsg)
-	// }
-
-	// if strings.Index(job.ContainerImage, ":") == -1 {
-	// 	job.ContainerImage = fmt.Sprintf("%s:latest", job.ContainerImage)
-	// }
-	//
-	// var imgRef string
-	// if strings.Contains(job.ContainerImage, "/") {
-	// 	// TODO: Support logins
-	// 	imgRef = job.ContainerImage
-	// } else {
-	// 	imgRef = fmt.Sprintf("docker.io/%s", job.ContainerImage)
-	// }
-	//
-	// // Get list of images on host
-	// imgList, err := cli.ImageList(ctx, types.ImageListOptions{
-	// 	All: true,
-	// })
-	// if err != nil {
-	// 	return err
-	// }
-	// imgAlreadyPulled := false
-	// imgID := ""
-	// for _, img := range imgList {
-	// 	if len(img.RepoTags) > 0 && img.RepoTags[0] == job.ContainerImage {
-	// 		imgAlreadyPulled = true
-	// 		imgID = img.ID
-	// 	}
-	// }
-	//
-	// if !imgAlreadyPulled || job.ImagePullPolicy == "Always" {
-	// 	reader, err2 := cli.ImagePull(ctx, imgRef, types.ImagePullOptions{})
-	// 	if err2 != nil {
-	// 		log.Printf("ImagePull imgRef: %s", imgRef)
-	// 		return err2
-	// 	}
-	//
-	// 	// This is currently needed to ensure images are downloaded before we
-	// 	// move on to creating containers...
-	// 	io.Copy(os.Stdout, reader)
-	//
-	// } else {
-	// 	log.Printf("Image %s already pulled & image_pull_policy: %s", job.ContainerImage, job.ImagePullPolicy)
-	// }
-	//
-	// if imgID == "" {
-	// 	// Get image ID
-	// 	imgList, err = cli.ImageList(ctx, types.ImageListOptions{
-	// 		All: true,
-	// 	})
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	for _, img := range imgList {
-	// 		if len(img.RepoTags) > 0 && img.RepoTags[0] == job.ContainerImage {
-	// 			imgID = img.ID
-	// 		}
-	// 	}
-	// }
-	// cleanup.ImageUsed(imgID, time.Now())
-	//
-	// cfg := container.Config{
-	// 	Image: job.ContainerImage,
-	// 	Cmd:   job.Run,
-	// 	Tty:   true,
-	// 	User:  fmt.Sprintf("%d:%d", gostintUID, gostintGID),
-	// 	Env:   job.EnvVars,
-	// }
-	//
-	// if len(job.EntryPoint) != 0 {
-	// 	cfg.Entrypoint = job.EntryPoint
-	// }
-	//
-	// if job.WorkingDir != "" {
-	// 	cfg.WorkingDir = job.WorkingDir
-	// }
-	//
-	// resp, err := cli.ContainerCreate(ctx, &cfg, nil, nil, "")
-	// if err != nil {
-	// 	log.Printf("ContainerCreate cfg: %v", cfg)
-	// 	return err
-	// }
-
-	// // save contentRdr and secretsRdr as UpdateJob() drops them from job
-	// contentRdr := job.contentRdr
-	// secretsRdr := job.secretsRdr
-
-	// job.UpdateJob(bson.M{
-	// 	"container_id": containerID,
-	// })
-
-	// log.Printf("Created container ID: %s", containerID)
-	//
-	// defer func() {
-	// 	log.Printf("Removing container %s", containerID)
-	// 	rmOpts := types.ContainerRemoveOptions{
-	// 		RemoveVolumes: true,
-	// 		RemoveLinks:   false,
-	// 		Force:         true,
-	// 	}
-	// 	if errD := cli.ContainerRemove(*ctx, containerID, rmOpts); errD != nil {
-	// 		log.Printf("Error: removing container: %s", errD)
-	// 	}
-	// }()
-
 	// Copy content into container prior to start it
 	opts := types.CopyToContainerOptions{
 		AllowOverwriteDirWithFile: true,
 	}
-	log.Println("before copy content")
 	err := cli.CopyToContainer(*ctx, containerID, "/", job.contentRdr, opts)
 	if err != nil {
 		return err
 	}
 
 	// Copy secrets into container prior to start it
-	log.Println("before copy secrets")
 	err = cli.CopyToContainer(*ctx, containerID, "/", job.secretsRdr, opts)
 	if err != nil {
 		return err
 	}
 
-	log.Println("before adduser")
 	err = addUser(*ctx, cli, containerID, "gostint", gostintUID, gostintGID, "/tmp")
 	if err != nil {
 		return err
 	}
 
-	log.Printf("before ContainerStart")
 	if err = cli.ContainerStart(*ctx, containerID, types.ContainerStartOptions{}); err != nil {
 		return err
 	}
