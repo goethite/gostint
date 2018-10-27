@@ -1,0 +1,12 @@
+
+                              |   _)         |
+           _` |   _ \    __|  __|  |  __ \   __|
+          (   |  (   | \__ \  |    |  |   |  |
+         \__, | \___/  ____/ \__| _| _|  _| \__|
+         |___/
+
+Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
+               Licensed under the GNU GPLv3
+
+https://goethite.github.io/gostint/
+https://github.com/goethite

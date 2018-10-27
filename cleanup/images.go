@@ -21,12 +21,12 @@ package cleanup
 
 import (
 	"context"
-	"log"
 	"math/rand"
 	"time"
 
 	client "docker.io/go-docker"
 	"docker.io/go-docker/api/types"
+	"github.com/gbevan/gostint/logmsg"
 )
 
 // docker image ID -> datetime last used in a job
@@ -43,24 +43,24 @@ func Images() {
 	for {
 		cli, err := client.NewEnvClient()
 		if err != nil {
-			log.Printf("get docker client error: %s", err)
+			logmsg.Error("get docker client error: %s", err)
 		}
 
 		imgList, err := cli.ImageList(ctx, types.ImageListOptions{
 			All: true,
 		})
 		if err != nil {
-			log.Printf("cleanup images get images from docker error: %s", err)
+			logmsg.Error("cleanup images get images from docker error: %s", err)
 		}
 		for _, img := range imgList {
 			age := time.Since(imageMap[img.ID])
 			if age.Hours() > 24 {
-				log.Printf("Removing unused image %s: %s", img.ID, img.RepoTags)
+				logmsg.Info("Removing unused image %s: %s", img.ID, img.RepoTags)
 				imagesDeleted, err := cli.ImageRemove(ctx, img.ID, types.ImageRemoveOptions{})
 				if err != nil {
-					log.Printf("Remove docker image error: %s", err)
+					logmsg.Error("Remove docker image error: %s", err)
 				}
-				log.Printf("Images Removed: %v", imagesDeleted)
+				logmsg.Debug("Images Removed: %v", imagesDeleted)
 			}
 		}
 
@@ -76,10 +76,10 @@ func imageList(ctx context.Context, cli *client.Client) {
 		All: true,
 	})
 	if err != nil {
-		log.Printf("cleanup images get images from docker error: %s", err)
+		logmsg.Error("cleanup images get images from docker error: %s", err)
 	}
 	for _, img := range imgList {
-		log.Printf(
+		logmsg.Info(
 			"img.RepoTags: %s Created: %v, Last Used: %s",
 			img.RepoTags,
 			time.Unix(img.Created, 0),

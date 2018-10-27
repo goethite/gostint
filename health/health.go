@@ -20,12 +20,12 @@ along with gostint.  If not, see <https://www.gnu.org/licenses/>.
 package health
 
 import (
-	"log"
 	"os"
 	"os/signal"
 	"strconv"
 	"sync"
 
+	"github.com/gbevan/gostint/logmsg"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	. "github.com/visionmedia/go-debug" // nolint
@@ -63,7 +63,7 @@ func Init(db *mgo.Database, nodeUUID string) {
 			sig := <-sigs
 			switch sig {
 			case os.Interrupt:
-				log.Println("SIGINT received, draining node...")
+				logmsg.Info("SIGINT received, draining node...")
 				SetState("draining")
 			}
 		}

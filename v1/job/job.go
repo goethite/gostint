@@ -22,7 +22,6 @@ package job
 import (
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/gbevan/gostint/apierrors"
 	"github.com/gbevan/gostint/jobqueues"
+	"github.com/gbevan/gostint/logmsg"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/go-chi/chi"
@@ -236,7 +236,7 @@ type killResponse struct {
 
 func killJob(w http.ResponseWriter, req *http.Request) {
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
-	log.Printf("killJob ID: %s", jobID)
+	logmsg.Warn("killJob ID: %s", jobID)
 	if jobID == "" {
 		render.Render(w, req, apierrors.ErrInvalidJobRequest(errors.New("job ID missing from GET path")))
 		return
