@@ -30,6 +30,7 @@ COPY jobqueues ./jobqueues/
 COPY apierrors ./apierrors/
 COPY health ./health/
 COPY cleanup ./cleanup/
+COPY logmsg ./logmsg/
 
 RUN \
   go get github.com/golang/dep/cmd/dep && \
