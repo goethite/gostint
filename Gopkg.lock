@@ -62,6 +62,12 @@
   version = "v0.3.3"
 
 [[projects]]
+  name = "github.com/fatih/color"
+  packages = ["."]
+  revision = "5b77d2a35fb0ede96d138fc9a99f5c9b6aef11b4"
+  version = "v1.7.0"
+
+[[projects]]
   name = "github.com/gbevan/godo"
   packages = [
     ".",
@@ -352,6 +358,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1b2a11dacafcb1424f79cd2e0074db232570123e6e8fce6296b6d9afc2050bf2"
+  inputs-digest = "c11c455d82ff6eb9b578d00520c812423e98e16be24580c6f16669592cd759c4"
   solver-name = "gps-cdcl"
   solver-version = 1
