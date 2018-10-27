@@ -31,6 +31,7 @@ import (
 	"github.com/gbevan/gostint/apierrors"
 	"github.com/gbevan/gostint/health"
 	"github.com/gbevan/gostint/jobqueues"
+	"github.com/gbevan/gostint/logmsg"
 	"github.com/gbevan/gostint/pingclean"
 	"github.com/gbevan/gostint/v1/health"
 	"github.com/gbevan/gostint/v1/job"
@@ -40,6 +41,8 @@ import (
 	"github.com/go-chi/render"
 	"github.com/hashicorp/vault/api"
 )
+
+//go:generate esc -o banner.go banner.txt
 
 // MongoDB session and db
 var dbSession *mgo.Session
@@ -110,7 +113,7 @@ func authenticate(next http.Handler) http.Handler {
 		}
 
 		if _, ok := r.Header["X-Auth-Token"]; !ok {
-			log.Println("Error: Missing X-Auth-Token")
+			logmsg.Error("Missing X-Auth-Token")
 			render.Render(w, r, apierrors.ErrInvalidRequest(errors.New("Missing X-Auth-Token")))
 			return
 		}
@@ -122,7 +125,7 @@ func authenticate(next http.Handler) http.Handler {
 		})
 		if err != nil {
 			errmsg := fmt.Sprintf("Failed create vault client api: %s", err)
-			log.Println(errmsg)
+			logmsg.Error(errmsg)
 			render.Render(w, r, apierrors.ErrInvalidRequest(fmt.Errorf(errmsg)))
 			return
 		}
@@ -132,7 +135,7 @@ func authenticate(next http.Handler) http.Handler {
 		// Verify the token is good
 		tokDetails, err := client.Logical().Read("auth/token/lookup-self")
 		if err != nil {
-			log.Printf("Authentication Failure with Token: %v", err)
+			logmsg.Error("Authentication Failure with Token: %v", err)
 			render.Render(w, r, apierrors.ErrInvalidRequest(err))
 			return
 		}
@@ -182,6 +185,15 @@ func Routes() *chi.Mux {
 }
 
 func main() {
+	if os.Getenv("GOSTINT_DEBUG") != "" {
+		logmsg.EnableDebug()
+	}
+
+	banner, err := FSString(false, "/banner.txt")
+	if err != nil {
+		logmsg.Error("banner failed: %v", err)
+	}
+	fmt.Println(banner)
 
 	serverPort := 3232
 	if os.Getenv("GOSTINT_PORT") != "" {
@@ -191,18 +203,18 @@ func main() {
 		}
 		serverPort = sp
 	}
-	log.Printf("Starting gostint...")
+	logmsg.Info("Starting gostint...")
 
 	username, password, err := getDbCreds()
 	if err != nil {
 		panic(err)
 	}
-	log.Println("Dialing Mongodb")
+	logmsg.Debug("Dialing Mongodb")
 	dbSession, err = mgo.Dial(os.Getenv("GOSTINT_DBURL"))
 	if err != nil {
 		panic(err)
 	}
-	log.Println("Logging in to gostint db")
+	logmsg.Debug("Logging in to gostint db")
 	gostintDb = dbSession.DB("gostint")
 	err = gostintDb.Login(username, password)
 	if err != nil {
@@ -226,7 +238,7 @@ func main() {
 	// Start job queues
 	jobqueues.Init(gostintDb, &appRole, nodeUUID)
 
-	log.Printf("gostint listening on https port %d", serverPort)
+	logmsg.Info("gostint listening on https port %d", serverPort)
 	log.Fatal(http.ListenAndServeTLS(
 		fmt.Sprintf(":%d", serverPort),
 		os.Getenv("GOSTINT_SSL_CERT"),

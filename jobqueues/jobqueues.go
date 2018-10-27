@@ -21,6 +21,7 @@ package jobqueues
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"context"
@@ -29,8 +30,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -41,6 +40,7 @@ import (
 	"github.com/gbevan/gostint/approle"
 	"github.com/gbevan/gostint/cleanup"
 	"github.com/gbevan/gostint/health"
+	"github.com/gbevan/gostint/logmsg"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/hashicorp/vault/api"
@@ -139,7 +139,7 @@ func requestHandler() {
 			var queues []string
 			err := c.Find(bson.M{}).Distinct("qname", &queues)
 			if err != nil {
-				log.Printf("Error: Find queues failed: %s\n", err)
+				logmsg.Error("Error: Find queues failed: %s\n", err)
 			}
 
 			for _, q := range queues {
@@ -161,7 +161,7 @@ func requestHandler() {
 					if err.Error() == "not found" {
 						continue
 					}
-					log.Printf("Error: Pop from queue %s failed: %v\n", q, err)
+					logmsg.Error("Pop from queue %s failed: %v\n", q, err)
 				}
 
 				// NOTE: if the returned job has status = "queued", then this has just
@@ -180,7 +180,7 @@ func requestHandler() {
 				}
 				_, err = c.FindId(job.ID).Apply(chg2, &job)
 				if err != nil {
-					log.Printf("Error: Update to node uuid on queue %s failed: %v\n", q, err)
+					logmsg.Error("Update to node uuid on queue %s failed: %v\n", q, err)
 				}
 
 				go job.runRequest()
@@ -210,7 +210,7 @@ func killHandler() {
 			},
 		}).All(&queues)
 		if err != nil {
-			log.Printf("killHandler Error: Find queues failed: %s\n", err)
+			logmsg.Error("killHandler Find queues failed: %s\n", err)
 			continue
 		}
 
@@ -235,7 +235,7 @@ func (job *Job) UpdateJob(u bson.M) (*Job, error) {
 	var resJob Job
 	_, err := c.FindId(job.ID).Apply(chg, &resJob)
 	if err != nil {
-		log.Printf("Error: update queue failed: %s\n", err)
+		logmsg.Error("update queue failed: %s\n", err)
 		return nil, err
 	}
 	return &resJob, nil
@@ -317,8 +317,8 @@ func (job *Job) resolveContentMeta() (*Meta, error) {
 func (job *Job) pullDockerImage(ctx *context.Context, cli *client.Client) (string, error) {
 
 	if job.ContainerImage == "" {
-		errmsg := "Error ContainerImage is empty"
-		log.Println(errmsg)
+		errmsg := "ContainerImage is empty"
+		logmsg.Error(errmsg)
 		return "", errors.New(errmsg)
 	}
 
@@ -353,16 +353,36 @@ func (job *Job) pullDockerImage(ctx *context.Context, cli *client.Client) (strin
 	if !imgAlreadyPulled || job.ImagePullPolicy == "Always" {
 		reader, err2 := cli.ImagePull(*ctx, imgRef, types.ImagePullOptions{})
 		if err2 != nil {
-			log.Printf("ImagePull imgRef: %s", imgRef)
+			logmsg.Error("ImagePull imgRef: %s, %v", imgRef, err2)
 			return "", err2
 		}
 
 		// This is currently needed to ensure images are downloaded before we
 		// move on to creating containers...
-		io.Copy(os.Stdout, reader)
+		scanner := bufio.NewScanner(reader)
+		for scanner.Scan() {
+			pullStatus := make(map[string]interface{})
+			jsonStr := []byte(scanner.Text())
+			// logmsg.Debug("image: jsonStr: %s", jsonStr)
+			err = json.Unmarshal(jsonStr, &pullStatus)
+			if err != nil {
+				logmsg.Error("parsing docker status: %v", err)
+				return "", err
+			}
+			// logmsg.Debug("image: %s", pullStatus)
+			progress := ""
+			if pullStatus["progress"] != nil {
+				progress = pullStatus["progress"].(string)
+			}
+			logmsg.Info("%s: %s", pullStatus["status"], progress)
+		}
+		if err = scanner.Err(); err != nil {
+			return "", err
+		}
+		// io.Copy(os.Stdout, reader)
 
 	} else {
-		log.Printf("Image %s already pulled & image_pull_policy: %s", job.ContainerImage, job.ImagePullPolicy)
+		logmsg.Info("Image %s already pulled & image_pull_policy: %s", job.ContainerImage, job.ImagePullPolicy)
 	}
 
 	if imgID == "" {
@@ -404,7 +424,7 @@ func (job *Job) createDockerContainer(ctx *context.Context, cli *client.Client, 
 	var resp container.ContainerCreateCreatedBody
 	resp, err := cli.ContainerCreate(*ctx, &cfg, nil, nil, "")
 	if err != nil {
-		log.Printf("ContainerCreate cfg: %v", cfg)
+		logmsg.Error("ContainerCreate cfg: %v", cfg)
 		return resp, err
 	}
 	return resp, nil
@@ -418,7 +438,11 @@ func (job *Job) metaFromDockerContainer(ctx *context.Context, cli *client.Client
 		}
 	}()
 	if err != nil {
-		log.Printf("metaFromDockerContainer err: %v", err)
+		if strings.Contains(err.Error(), "Could not find the file") {
+			logmsg.Debug("metaFromDockerContainer err: %s", err)
+		} else {
+			logmsg.Error("metaFromDockerContainer err: %s", err)
+		}
 		return nil, nil
 	}
 
@@ -482,7 +506,7 @@ func (job *Job) runRequest() {
 		// Revoke the ephemeral token
 		_, err = vclient.Logical().Write("auth/token/revoke-self", nil)
 		if err != nil {
-			log.Printf("Error: revoking token after job completed: %s", err)
+			logmsg.Error("revoking token after job completed: %s", err)
 		}
 	}()
 
@@ -583,18 +607,18 @@ func (job *Job) runRequest() {
 		"container_id": containerBody.ID,
 	})
 
-	log.Printf("Created container ID: %s", containerBody.ID)
+	logmsg.Info("Created container ID: %s", containerBody.ID)
 
 	// Automatically clean up the container
 	defer func() {
-		log.Printf("Removing container %s", containerBody.ID)
+		logmsg.Debug("Removing container %s", containerBody.ID)
 		rmOpts := types.ContainerRemoveOptions{
 			RemoveVolumes: true,
 			RemoveLinks:   false,
 			Force:         true,
 		}
 		if errD := cli.ContainerRemove(*ctx, containerBody.ID, rmOpts); errD != nil {
-			log.Printf("Error: removing container: %s", errD)
+			logmsg.Error("removing container: %s", errD)
 		}
 	}()
 
@@ -857,7 +881,11 @@ func (job *Job) runContainer(ctx *context.Context, cli *client.Client, container
 	case statusBody = <-statusCh:
 	}
 	status := statusBody.StatusCode
-	log.Printf("status from container wait: %d", status)
+	if status == 0 {
+		logmsg.Info("status from container wait: %d", status)
+	} else {
+		logmsg.Error("status from container wait: %d", status)
+	}
 
 	out, err := cli.ContainerLogs(*ctx, containerID, types.ContainerLogsOptions{ShowStdout: true})
 	if err != nil {
@@ -967,7 +995,7 @@ func (job *Job) kill() error {
 	if job.ContainerID == "" {
 		return errors.New("job.ContainerID is missing")
 	}
-	log.Printf("Stopping container %s", job.ContainerID)
+	logmsg.Info("Stopping container %s", job.ContainerID)
 
 	ctx := context.Background()
 	cli, err := client.NewEnvClient()
@@ -984,13 +1012,13 @@ func (job *Job) kill() error {
 
 		err = cli.ContainerStop(ctx, job.ContainerID, &timeout)
 		if err != nil {
-			log.Printf("Stop container %s request failed: %s", job.ContainerID, err)
+			logmsg.Error("Stop container %s request failed: %s", job.ContainerID, err)
 		}
 
 		err = cli.ContainerKill(ctx, job.ContainerID, "KILL")
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), "is not running") {
-				log.Printf("Kill container %s request failed: %s", job.ContainerID, err)
+				logmsg.Error("Kill container %s request failed: %s", job.ContainerID, err)
 			}
 		}
 	}()
