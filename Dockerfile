@@ -22,7 +22,7 @@
 FROM golang:latest as builder
 WORKDIR /go/src/github.com/gbevan/gostint
 
-COPY main.go Gopkg* ./
+COPY main.go banner.go Gopkg* ./
 COPY v1 ./v1/
 COPY approle ./approle/
 COPY pingclean ./pingclean/
