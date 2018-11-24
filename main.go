@@ -26,6 +26,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 
 	"github.com/gbevan/gostint/apierrors"
@@ -203,6 +204,7 @@ func main() {
 		}
 		serverPort = sp
 	}
+	logmsg.Info("Compiled with: %v", runtime.Version())
 	logmsg.Info("Starting gostint...")
 
 	username, password, err := getDbCreds()

@@ -2,6 +2,7 @@
   "qname": "play job1",
   "container_image": "busybox",
   "content": "",
+  "image_pull_policy": "Always",
   "run": [
     "sh", "-c", "ls -la /etc/passwd; cat /etc/passwd; ps -efl"
   ],
