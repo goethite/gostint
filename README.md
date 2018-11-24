@@ -87,6 +87,104 @@ A sister project called [gostint-client](https://github.com/goethite/gostint-cli
 is also available to simplify the client side integrations with Hashicorp Vault
 and drive the [gostint api](https://goethite.github.io/gostint/docs/1100_api_v1_job/).
 
+## Developer Guide
+
+Development and testing is done in a Vagrant/Docker environment:
+```bash
+$ vagrant up
+...
+$ vagrant ssh
+```
+The environment should already be running an instance of MongoDB and Hashicorp Vault:
+```bash
+vagrant@2c6839c78fbd:~$ ps -ef
+UID         PID   PPID  C STIME TTY          TIME CMD
+root          1      0  0 11:09 ?        00:00:00 /usr/sbin/sshd -D -e
+root       2498      1  0 11:10 ?        00:00:02 dockerd -s vfs
+root       2526   2498  1 11:10 ?        00:00:04 containerd --config /var/run/docker/containerd/containerd.toml --log-level info
+root       3256      1  1 11:10 ?        00:00:05 mongod --config /etc/mongod.conf --fork --smallfiles --auth --bind_ip 0.0.0.0
+root       3309      1  0 11:10 ?        00:00:02 vault server -dev -dev-root-token-id=root -dev-listen-address=0.0.0.0:8200
+root       3608      1  0 11:15 ?        00:00:00 sshd: vagrant [priv]
+vagrant    3610   3608  0 11:15 ?        00:00:00 sshd: vagrant@pts/0
+vagrant    3611   3610  0 11:15 pts/0    00:00:00 -bash
+vagrant    3629   3611  0 11:17 pts/0    00:00:00 ps -ef
+```
+Notice it is also running an instance of Docker-in-Docker (the vagrant instance
+runs the docker container in `privileged` mode to support this).
+
+Change to the gostint source folder (mapped by vagrant from your gostint git
+clone folder):
+```bash
+vagrant@2c6839c78fbd:~$ cd go/src/github.com/gbevan/gostint
+```
+
+and run `godo` to build and start the gostint application:
+```bash
+~/go/src/github.com/gbevan/gostint$ godo
+Success! You are now authenticated. The token information displayed below
+is already stored in the token helper. You do NOT need to run "vault login"
+again. Future Vault requests will automatically use this token.
+
+Key                  Value
+---                  -----
+token                root
+token_accessor       4mOso4ZzgZ9PR5wjDwhM2YiK
+token_duration       ∞
+token_renewable      false
+token_policies       ["root"]
+identity_policies    []
+policies             ["root"]
+Success! Data written to: secret/my-secret
+Success! Data written to: secret/my-form
+Key              Value
+---              -----
+created_time     2018-11-24T11:24:21.632236029Z
+deletion_time    n/a
+destroyed        false
+version          3
+Key              Value
+---              -----
+created_time     2018-11-24T11:24:21.665699192Z
+deletion_time    n/a
+destroyed        false
+version          3
+gettoken>mocksecrets 187ms
+7lbKwKMayAkJnwUmHmnmLgge
+default>gettoken 12ms
+default 317ms
+
+                              |   _)         |
+           _` |   _ \    __|  __|  |  __ \   __|
+          (   |  (   | \__ \  |    |  |   |  |
+         \__, | \___/  ____/ \__| _| _|  _| \__|
+         |___/
+
+Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
+               Licensed under the GNU GPLv3
+
+https://goethite.github.io/gostint/
+https://github.com/goethite
+
+2018/11/24 11:24:22 INFO: Starting gostint...
+2018/11/24 11:24:22 INFO: gostint listening on https port 3232
+```
+
+`godo` can also run in `watch` mode, so it automatically restarts when you make
+changes to the code:
+```bash
+~/go/src/github.com/gbevan/gostint$ godo --watch
+```
+
+To run the BATS test suite (in another terminal session):
+```bash
+~/go/src/github.com/gbevan/gostint$ godo test
+
+***************************
+*** Starting BATS Tests ***
+***************************
+...
+```
+
 ## LICENSE - GPLv3
 
 ```

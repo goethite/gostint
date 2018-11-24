@@ -34,9 +34,9 @@ import (
 	"strings"
 	"time"
 
-	client "docker.io/go-docker"
-	"docker.io/go-docker/api/types"
-	"docker.io/go-docker/api/types/container"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
 	"github.com/gbevan/gostint/approle"
 	"github.com/gbevan/gostint/cleanup"
 	"github.com/gbevan/gostint/health"
@@ -425,6 +425,7 @@ func (job *Job) createDockerContainer(ctx *context.Context, cli *client.Client, 
 	resp, err := cli.ContainerCreate(*ctx, &cfg, nil, nil, "")
 	if err != nil {
 		logmsg.Error("ContainerCreate cfg: %v", cfg)
+		logmsg.Error("err: %v", err)
 		return resp, err
 	}
 	return resp, nil
@@ -438,7 +439,8 @@ func (job *Job) metaFromDockerContainer(ctx *context.Context, cli *client.Client
 		}
 	}()
 	if err != nil {
-		if strings.Contains(err.Error(), "Could not find the file") {
+		// if strings.Contains(err.Error(), "Could not find the file") {
+		if strings.Contains(err.Error(), "No such container:path") {
 			logmsg.Debug("metaFromDockerContainer err: %s", err)
 		} else {
 			logmsg.Error("metaFromDockerContainer err: %s", err)

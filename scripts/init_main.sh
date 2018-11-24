@@ -1,5 +1,8 @@
 #!/bin/bash -e
 
+apt update
+apt install locales
+
 # Locales
 locale-gen en_GB
 locale-gen en_GB.UTF-8
@@ -8,7 +11,7 @@ update-locale en_GB
 export DEBIAN_FRONTEND=noninteractive
 
 # Install docker
-apt update
+# apt update
 apt install -y \
   apt-transport-https \
   ca-certificates \
@@ -24,14 +27,16 @@ add-apt-repository \
   stable"
 apt update
 # apt install -y docker-ce=18.03.1~ce~3-0~ubuntu
-apt install -y docker-ce
+# apt install -y docker-ce=5:18.09.0~3-0~ubuntu-bionic # match Gopkg.toml constraint
+apt install -y docker-ce=18.06.1~ce~3-0~ubuntu # match Dockerfile
 gpasswd -a vagrant docker
 
 # Start dockerd
 dockerd -s vfs >/tmp/docker.log 2>&1 &
 
 # Install Go
-GOVER="1.10.3"
+# GOVER="1.10.3"
+GOVER="1.11.2"
 wget -qO- https://dl.google.com/go/go${GOVER}.linux-amd64.tar.gz | \
   tar zx -C /usr/local/
 export PATH=$PATH:/usr/local/go/bin

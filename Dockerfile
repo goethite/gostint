@@ -49,6 +49,7 @@ WORKDIR /app
 COPY start-image.sh .
 
 # apk add --no-cache docker jq curl openssl sudo && \
+# TODO: look at pinning the docker version to match Gopkg.toml constraint
 RUN \
   apk add --no-cache docker sudo curl && \
   adduser -S -D -H -G docker -h /app gostint && \

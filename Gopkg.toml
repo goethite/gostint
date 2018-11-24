@@ -41,8 +41,16 @@
   version = "0.11.3"
 
 [[constraint]]
-  name = "docker.io/go-docker"
-  version = "1.0.0"
+  name = "github.com/docker/docker"
+  # This repository allows us to have a track of recent releases (tags not
+  # available in moby/moby)
+  # https://github.com/moby/moby/issues/33989#issuecomment-403873249
+  source = "https://github.com/docker/engine.git"
+  # version = "v18.06.1" commit point
+  revision = "320063a2ad06a1d8ada61c94c29dbe44e2d87473"
+  # # version = "v18.09.0" commit point
+  # revision = "f5749085e9cb0565afe342e73a67631f97547054"
+
 
 [[constraint]]
   name = "github.com/gbevan/godo"
