@@ -20,12 +20,12 @@ along with gostint.  If not, see <https://www.gnu.org/licenses/>.
 package health
 
 import (
-	"os"
-	"os/signal"
+	"fmt"
 	"strconv"
-	"sync"
 
+	"github.com/gbevan/gostint/jobqueues"
 	"github.com/gbevan/gostint/logmsg"
+	"github.com/gbevan/gostint/state"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	. "github.com/visionmedia/go-debug" // nolint
@@ -33,64 +33,29 @@ import (
 
 var debug = Debug("health")
 
-// State holds the gostint nodes health and state
-type State struct {
-	State    string
-	db       *mgo.Database
-	nodeUUID string
+// Health holds props
+type Health struct {
+	db *mgo.Database
 }
 
 var (
-	state      State
-	stateMutex sync.Mutex
+	health Health
+	// stateMutex sync.Mutex
 )
 
-// Init initialises
-func Init(db *mgo.Database, nodeUUID string) {
-	stateMutex.Lock()
-	state = State{
-		State:    "active",
-		db:       db,
-		nodeUUID: nodeUUID,
+// Init the health module
+func Init(db *mgo.Database) {
+	health = Health{
+		db: db,
 	}
-	stateMutex.Unlock()
-
-	// SIGINT Handler to drain the node for shutdown
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, os.Interrupt)
-	go func() {
-		for {
-			sig := <-sigs
-			switch sig {
-			case os.Interrupt:
-				logmsg.Info("SIGINT received, draining node...")
-				SetState("draining")
-			}
-		}
-	}()
-}
-
-// SetState sets the node's State
-func SetState(s string) {
-	stateMutex.Lock()
-	state.State = s
-	stateMutex.Unlock()
-}
-
-// GetState Returns the gostint node's state
-func GetState() string {
-	stateMutex.Lock()
-	s := state.State
-	stateMutex.Unlock()
-	return s
 }
 
 // GetHealth Returns the gostint health status
 func GetHealth() (*map[string]string, error) {
 	m := make(map[string]string)
-	m["state"] = GetState()
+	m["state"] = state.GetState()
 
-	db := state.db
+	db := health.db
 	c := db.C("queues")
 
 	num, err := c.Count()
@@ -155,6 +120,22 @@ func GetHealth() (*map[string]string, error) {
 		return nil, err
 	}
 	m["unknown_jobs"] = strconv.Itoa(num)
+
+	// Docker Info
+	clientAPIVer, dockerInfo, err := jobqueues.GetDockerInfo()
+	if err == nil {
+		logmsg.Info("client ver %v", clientAPIVer)
+	}
+
+	m["containers"] = fmt.Sprintf("%d", dockerInfo.Containers)
+	m["containers_running"] = fmt.Sprintf("%d", dockerInfo.ContainersRunning)
+	m["containers_paused"] = fmt.Sprintf("%d", dockerInfo.ContainersPaused)
+	m["containers_stopped"] = fmt.Sprintf("%d", dockerInfo.ContainersStopped)
+	m["images"] = fmt.Sprintf("%d", dockerInfo.Images)
+	m["mem_total"] = fmt.Sprintf("%d", dockerInfo.MemTotal)
+	m["architecture"] = fmt.Sprintf("%s", dockerInfo.Architecture)
+	m["operating_system"] = fmt.Sprintf("%s", dockerInfo.OperatingSystem)
+	// m["runtimes"] = fmt.Sprintf("%v", dockerInfo.Runtimes)
 
 	return &m, nil
 }

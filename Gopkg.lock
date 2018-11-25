@@ -38,6 +38,12 @@
   version = "v0.4.11"
 
 [[projects]]
+  name = "github.com/avast/retry-go"
+  packages = ["."]
+  revision = "611bd93c6d74b0575c569d7c3a13de46f65840ff"
+  version = "1.0.2"
+
+[[projects]]
   name = "github.com/docker/distribution"
   packages = [
     "digestset",
@@ -382,6 +388,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c89a41b144ffe8bf37324ea6273f11d64dce811f2e1c4a836cb0a97a80d73a43"
+  inputs-digest = "4c53b678c5ab180e5c2b6525851945030e1f397d4eac1c4742501e6ee657deca"
   solver-name = "gps-cdcl"
   solver-version = 1

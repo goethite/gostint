@@ -28,12 +28,14 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/gbevan/gostint/apierrors"
 	"github.com/gbevan/gostint/health"
 	"github.com/gbevan/gostint/jobqueues"
 	"github.com/gbevan/gostint/logmsg"
 	"github.com/gbevan/gostint/pingclean"
+	"github.com/gbevan/gostint/state"
 	"github.com/gbevan/gostint/v1/health"
 	"github.com/gbevan/gostint/v1/job"
 	"github.com/globalsign/mgo"
@@ -234,8 +236,11 @@ func main() {
 	// Create RESTful routes
 	router := Routes()
 
-	// initialise health state
-	health.Init(gostintDb, nodeUUID)
+	// initialise state
+	state.Init(nodeUUID)
+
+	// initialise health
+	health.Init(gostintDb)
 
 	// Start job queues
 	jobqueues.Init(gostintDb, &appRole, nodeUUID)
