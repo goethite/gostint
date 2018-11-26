@@ -28,7 +28,6 @@ import (
 	"os"
 	"runtime"
 	"strconv"
-	"strings"
 
 	"github.com/gbevan/gostint/apierrors"
 	"github.com/gbevan/gostint/health"
@@ -36,6 +35,7 @@ import (
 	"github.com/gbevan/gostint/logmsg"
 	"github.com/gbevan/gostint/pingclean"
 	"github.com/gbevan/gostint/state"
+	"github.com/gbevan/gostint/ui"
 	"github.com/gbevan/gostint/v1/health"
 	"github.com/gbevan/gostint/v1/job"
 	"github.com/globalsign/mgo"
@@ -46,6 +46,7 @@ import (
 )
 
 //go:generate esc -o banner.go banner.txt
+//go:generate esc -prefix "ui" -ignore "(\\.go|LICENSE|\\.md)" -pkg ui -o ui/ui.go ui/
 
 // MongoDB session and db
 var dbSession *mgo.Session
@@ -176,13 +177,26 @@ func Routes() *chi.Mux {
 		middleware.DefaultCompress,
 		middleware.RedirectSlashes,
 		middleware.Recoverer,
-		authenticate,
+		// authenticate,
 	)
 
+	// router.Route("/", func(r chi.Router) {
+	// 	r.Mount("/", job.Routes(GetDb()))
+	// })
+
+	// router.Use(
+	// 	authenticate,
+	// )
+
 	router.Route("/v1", func(r chi.Router) {
+		r.Use(
+			authenticate,
+		)
 		r.Mount("/api/job", job.Routes(GetDb()))
 		r.Mount("/api/health", healthApi.Routes(GetDb()))
 	})
+
+	router.Mount("/", http.FileServer(ui.FS(false)))
 
 	return router
 }
