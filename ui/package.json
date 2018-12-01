@@ -6,16 +6,17 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack --mode development",
-    "godo": "webpack --mode development && cd .. && godo gogenerate && GOSTINT_DEBUG=1 godo"
+    "godo": "webpack --mode development && cd .. && godo gogenerate && VAULT_EXTERNAL_ADDR=http://127.0.0.1:8300 GOSTINT_DEBUG=1 godo"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "GPLv3",
   "dependencies": {
     "bootstrap": "^4.1.3",
     "react": "^16.6.3",
     "react-dom": "^16.6.3",
-    "reactstrap": "^6.5.0"
+    "reactstrap": "^6.5.0",
+    "restful-react": "^6.1.1"
   },
   "devDependencies": {
     "@babel/core": "^7.1.6",

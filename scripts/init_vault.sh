@@ -102,3 +102,10 @@ vault write auth/approle/role/$GOSTINT_ROLENAME \
 # Get RoleID for gostint
 export GOSTINT_ROLEID=`vault read -format=yaml -field=data auth/approle/role/$GOSTINT_ROLENAME/role-id | awk '{print $2;}'`
 echo -e "export GOSTINT_ROLEID=$GOSTINT_ROLEID\nexport GOSTINT_ROLENAME=$GOSTINT_ROLENAME" | tee -a .bashrc
+
+echo '=== Allow CORS for UI Development ========================'
+curl -s \
+  --request PUT \
+  --header 'X-Vault-Token: root' \
+  --data '{"allowed_origins": "https://127.0.0.1:3232"}' \
+  ${VAULT_ADDR}/v1/sys/config/cors

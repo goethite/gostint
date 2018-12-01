@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/gbevan/gostint/apierrors"
+	"github.com/gbevan/gostint/authenticate"
 	"github.com/gbevan/gostint/jobqueues"
 	"github.com/gbevan/gostint/logmsg"
 	"github.com/globalsign/mgo"
@@ -65,6 +66,10 @@ func Routes(db *mgo.Database) *chi.Mux {
 	}
 	router := chi.NewRouter()
 
+	router.Use(
+		authenticate.Authenticate,
+	)
+
 	router.Post("/", postJob)
 	router.Post("/kill/{jobID}", killJob)
 	router.Get("/{jobID}", getJob)
@@ -86,8 +91,8 @@ type getResponse struct {
 	ReturnCode     int       `json:"return_code"`
 }
 
-// AuthCtxKey context key for authentication state & policy map
-type AuthCtxKey string
+// // AuthCtxKey context key for authentication state & policy map
+// type AuthCtxKey string
 
 func getJob(w http.ResponseWriter, req *http.Request) {
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))

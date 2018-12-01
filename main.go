@@ -20,8 +20,6 @@ along with gostint.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -29,7 +27,6 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/gbevan/gostint/apierrors"
 	"github.com/gbevan/gostint/health"
 	"github.com/gbevan/gostint/jobqueues"
 	"github.com/gbevan/gostint/logmsg"
@@ -38,6 +35,7 @@ import (
 	"github.com/gbevan/gostint/ui"
 	"github.com/gbevan/gostint/v1/health"
 	"github.com/gbevan/gostint/v1/job"
+	"github.com/gbevan/gostint/v1/vault"
 	"github.com/globalsign/mgo"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -107,67 +105,6 @@ func getDbCreds() (string, string, error) {
 	return username, password, nil
 }
 
-func authenticate(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Allow heath data without authenticating
-		if r.Method == "GET" && r.URL.Path == "/v1/api/health" {
-			ctx := context.WithValue(r.Context(), job.AuthCtxKey("auth"), nil)
-			next.ServeHTTP(w, r.WithContext(ctx))
-			return
-		}
-
-		if _, ok := r.Header["X-Auth-Token"]; !ok {
-			logmsg.Error("Missing X-Auth-Token")
-			render.Render(w, r, apierrors.ErrInvalidRequest(errors.New("Missing X-Auth-Token")))
-			return
-		}
-		token := r.Header["X-Auth-Token"][0]
-		// log.Printf("X-Auth-Token: %v", token)
-
-		client, err := api.NewClient(&api.Config{
-			Address: os.Getenv("VAULT_ADDR"),
-		})
-		if err != nil {
-			errmsg := fmt.Sprintf("Failed create vault client api: %s", err)
-			logmsg.Error(errmsg)
-			render.Render(w, r, apierrors.ErrInvalidRequest(fmt.Errorf(errmsg)))
-			return
-		}
-
-		client.SetToken(token)
-
-		// Verify the token is good
-		tokDetails, err := client.Logical().Read("auth/token/lookup-self")
-		if err != nil {
-			logmsg.Error("Authentication Failure with Token: %v", err)
-			render.Render(w, r, apierrors.ErrInvalidRequest(err))
-			return
-		}
-		// tokJson, _ := json.Marshal(tokDetails)
-		// log.Printf("tokDetails: %s", tokJson)
-
-		authStruct := AuthStruct{
-			Authenticated: true,
-			PolicyMap:     map[string]bool{},
-		}
-
-		// log.Printf("Data policies: %v", tokDetails.Data["policies"])
-		for _, p := range tokDetails.Data["policies"].([]interface{}) {
-			authStruct.PolicyMap[p.(string)] = true
-		}
-
-		ctx := context.WithValue(r.Context(), job.AuthCtxKey("auth"), authStruct)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-// AuthStruct holds authenticated state and policy map from vault for the token
-// placed in context
-type AuthStruct struct {
-	Authenticated bool
-	PolicyMap     map[string]bool
-}
-
 // Routes defines RESTful api middleware and routes.
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
@@ -181,11 +118,9 @@ func Routes() *chi.Mux {
 	)
 
 	router.Route("/v1", func(r chi.Router) {
-		r.Use(
-			authenticate,
-		)
 		r.Mount("/api/job", job.Routes(GetDb()))
 		r.Mount("/api/health", healthApi.Routes(GetDb()))
+		r.Mount("/api/vault", vault.Routes())
 	})
 
 	// Note: http.FileServer will automatically resolve Content-Type headers
