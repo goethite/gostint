@@ -46,7 +46,7 @@ import (
 )
 
 //go:generate esc -o banner.go banner.txt
-//go:generate esc -prefix "ui" -ignore "(\\.go|LICENSE|\\.md)" -pkg ui -o ui/ui.go ui/
+//go:generate esc -prefix "ui" -include "(^ui/index.html|^ui/css|^ui/js|^ui/dist|css/bootstrap.css)" -pkg ui -o ui/ui.go ui
 
 // MongoDB session and db
 var dbSession *mgo.Session
@@ -180,14 +180,6 @@ func Routes() *chi.Mux {
 		// authenticate,
 	)
 
-	// router.Route("/", func(r chi.Router) {
-	// 	r.Mount("/", job.Routes(GetDb()))
-	// })
-
-	// router.Use(
-	// 	authenticate,
-	// )
-
 	router.Route("/v1", func(r chi.Router) {
 		r.Use(
 			authenticate,
@@ -196,6 +188,7 @@ func Routes() *chi.Mux {
 		r.Mount("/api/health", healthApi.Routes(GetDb()))
 	})
 
+	// Note: http.FileServer will automatically resolve Content-Type headers
 	router.Mount("/", http.FileServer(ui.FS(false)))
 
 	return router

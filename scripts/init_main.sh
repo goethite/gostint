@@ -1,5 +1,9 @@
 #!/bin/bash -e
 
+GOVER="1.11.2"
+NODEVER="10"
+DOCKERVER="18.06.1~ce~3-0~ubuntu"  # match Dockerfile
+
 apt update
 apt install locales
 
@@ -26,17 +30,17 @@ add-apt-repository \
   $(lsb_release -cs) \
   stable"
 apt update
-# apt install -y docker-ce=18.03.1~ce~3-0~ubuntu
-# apt install -y docker-ce=5:18.09.0~3-0~ubuntu-bionic # match Gopkg.toml constraint
-apt install -y docker-ce=18.06.1~ce~3-0~ubuntu # match Dockerfile
+apt install -y docker-ce=${DOCKERVER}
 gpasswd -a vagrant docker
+
+# install nodejs
+curl -sL https://deb.nodesource.com/setup_${NODEVER}.x | bash -
+apt-get install -y nodejs
 
 # Start dockerd
 dockerd -s vfs >/tmp/docker.log 2>&1 &
 
 # Install Go
-# GOVER="1.10.3"
-GOVER="1.11.2"
 wget -qO- https://dl.google.com/go/go${GOVER}.linux-amd64.tar.gz | \
   tar zx -C /usr/local/
 export PATH=$PATH:/usr/local/go/bin

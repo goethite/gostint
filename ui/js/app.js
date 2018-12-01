@@ -1,10 +1,13 @@
-import { Login } from '/js/login.js';
+import { Login } from './login.js';
+import React from 'react';
+import { render } from 'react-dom';
 
 const node = document.getElementById('gostint');
-ReactDOM.render(
-  React.createElement('div', {},
-    React.createElement('h1', {}, 'gostint ui'),
-    React.createElement(Login, {})
-  ),
-  node
+
+render(
+  <div>
+    <h1 className="siteHeader">gostint</h1>
+    <Login/>
+  </div>
+  , node
 );
