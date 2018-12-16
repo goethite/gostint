@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-GOVER="1.11.2"
+GOVER="1.11.3"
 NODEVER="10"
 DOCKERVER="18.06.1~ce~3-0~ubuntu"  # match Dockerfile
 

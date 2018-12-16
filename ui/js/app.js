@@ -1,12 +1,38 @@
-import { Login } from './login.js';
-import React from 'react';
+import React, { Component } from 'react';
 import { render } from 'react-dom';
+import {
+  Button,
+  Form,
+  FormGroup,
+  Input,
+  InputGroup,
+  Label
+} from 'reactstrap';
 
-const node = document.getElementById('gostint');
-render(
-    <div>
-      <h1 className="siteHeader">gostint</h1>
-      <Login/>
-    </div>
-  , node
-);
+import ToolBar from './toolbar';
+import Action from './action';
+import ErrorMsg from './error_message.js';
+
+class App extends Component {
+  constructor(props) {
+    super(props);
+    console.log('App in constructor this:', this);
+
+    this.state = {
+      token: (this.props ? this.props.vaultAuth.token : null)
+    };
+  }
+
+  render() {
+    return (
+      <div>
+        <ToolBar/>
+
+        <Action URLs={this.props.URLs} vaultAuth={this.props.vaultAuth} />
+
+      </div>
+    );
+  }
+}
+
+export default App;
