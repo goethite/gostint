@@ -318,6 +318,10 @@ class Action extends Component {
 
       const job = this.buildJob()
       console.log('job:', job);
+      let apiToken;
+      let wrapSecretID;
+      let encryptedJob;
+      let cubbyToken;
 
       // Get a minimal token for job submission to gostint
       this.vault('v1/auth/token/create', 'POST', {
@@ -328,7 +332,7 @@ class Action extends Component {
       })
       .then((res) => {
         console.log('create token res:', res);
-        const apiToken = res.auth.client_token;
+        apiToken = res.auth.client_token;
 
         // Get secret id for gostint approle
         return this.vault(`v1/auth/approle/role/${this.state.gostintRole}/secret-id`, 'POST');
@@ -346,6 +350,67 @@ class Action extends Component {
       })
       .then((res) => {
         console.log('get wrapped secret_id res:', res);
+        wrapSecretID = res.wrap_info.token;
+
+        // Encrypt the job payload
+        const jobB64 = Buffer.from(JSON.stringify(job)).toString('base64');
+        return this.vault(
+          `v1/transit/encrypt/${this.state.gostintRole}`,
+          'POST',
+          {plaintext: jobB64}
+        );
+      })
+      .then((res) => {
+        console.log('get encrypted job res:', res);
+
+        encryptedJob = res.data.ciphertext;
+
+        // get limited use token for cubbyhole
+        return this.vault('v1/auth/token/create', 'POST', {
+          policies: ['default'],
+          ttl: '1h',
+          use_limit: 2,
+          display_name: 'gostint_cubbyhole'
+        });
+      })
+      .then((res) => {
+        console.log('cubbyhole token res:', res);
+        cubbyToken = res.auth.client_token;
+
+        console.log('encryptedJob:', encryptedJob);
+
+        // Put encrypted job in cubbyhole
+        return this.vault(
+          'v1/cubbyhole/job',
+          'POST',
+          {payload: encryptedJob},
+          {'X-Vault-Token': cubbyToken}
+        );
+      })
+      .then(() => {
+        console.log('cubbyhole post');
+
+        // create job wrapper
+        const jWrap = {
+          qname: this.state.qName,
+          cubby_token: cubbyToken,
+          cubby_path: 'cubbyhole/job',
+          wrap_secret_id: wrapSecretID
+        };
+
+        // submit job
+        return this.gostint(
+          'v1/api/job',
+          'POST',
+          jWrap,
+          {
+            'X-Auth-Token': apiToken,
+            'Content-Type': 'application/json'
+          }
+        );
+      })
+      .then((res) => {
+        console.log('job post res:', res);
       })
       .catch((err) => {
         console.error('err:', err);
@@ -372,7 +437,10 @@ class Action extends Component {
 
   vault(path, method, data, headers) {
     headers = headers || {}
-    headers['X-Vault-Token'] = this.props.vaultAuth.token;
+    if (!headers['X-Vault-Token']) {
+      headers['X-Vault-Token'] = this.props.vaultAuth.token;
+    }
+    console.log('vault: path:', path, 'method:', method, 'data:', data, 'headers:', headers);
 
     return fetch(this.props.URLs.vault + '/' + path, {
       headers,
@@ -380,12 +448,26 @@ class Action extends Component {
       body: data ? JSON.stringify(data) : undefined
     })
     .then((res) => {
-      if (res.status !== 200) {
-        return Promise.reject(
-          new Error(`Request failed with status: ${res.status} ${res.statusText} [${res.url}]`)
-        );
+      switch(res.status) {
+        case 200:
+          return res.json();
+        case 204:
+          return;
+        default:
+          return Promise.reject(
+            new Error(`Request failed with status: ${res.status} ${res.statusText} [${res.url}]`)
+          );
       }
-      return res.json();
+    });
+  }
+
+  gostint(path, method, data, headers) {
+    console.log('gostint: path:', path, 'method:', method, 'data:', data, 'headers:', headers);
+
+    return fetch(this.props.URLs.gostint + '/' + path, {
+      headers,
+      method: method || 'GET',
+      body: data ? JSON.stringify(data) : undefined
     });
   }
 
