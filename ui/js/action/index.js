@@ -19,6 +19,8 @@ import ErrorMsg from '../error_message.js';
 import EnvVars from './env_vars.js';
 import SecretMaps from './secret_maps.js';
 
+import { parse } from 'shell-quote';
+
 import css from './style.css';
 
 class Action extends Component {
@@ -70,10 +72,21 @@ class Action extends Component {
             this.getBase64(target.files[0])
             .then((data) => {
               console.log('data:', data);
+              if (!data || data === '') { // Cancel pressed
+                this.setState({
+                  'content': '',
+                  'contentB64': ''
+                });
+                return;
+              }
               const parts = data.split(',');
               console.log('parts:', parts);
               if (parts[0].search('gzip') === -1) {
-                this.setState({contentErrorMessage: 'not a gzip file'});
+                this.setState({
+                  contentErrorMessage: 'not a gzip file',
+                  'content': '',
+                  'contentB64': ''
+                });
                 return;
               }
               this.setState((state) => {
@@ -344,7 +357,7 @@ class Action extends Component {
         return this.vault(
           'v1/sys/wrapping/wrap',
           'POST',
-          res,
+          res.data,
           {'X-Vault-Wrap-TTL': 300}
         );
       })
@@ -397,6 +410,7 @@ class Action extends Component {
           cubby_path: 'cubbyhole/job',
           wrap_secret_id: wrapSecretID
         };
+        console.log('jWrap:', jWrap);
 
         // submit job
         return this.gostint(
@@ -411,6 +425,10 @@ class Action extends Component {
       })
       .then((res) => {
         console.log('job post res:', res);
+        return res.json()
+      })
+      .then((data) => {
+        console.log('job post data:', data);
       })
       .catch((err) => {
         console.error('err:', err);
@@ -421,17 +439,17 @@ class Action extends Component {
 
   buildJob() {
     return {
-      qname: this.state.qName,
-      container_image: this.state.dockerImage,
-      image_pull_policy: this.state.imagePullPolicy,
-      content: this.state.contentB64 || '',
-      entrypoint: this.state.entryPoint,
-      run: this.state.run,
-      working_directory: this.state.workingDir,
-      env_vars: this.state.envVars,
-      secret_refs: this.state.secretMaps,
-      secret_file_type: this.state.secretFileType,
-      cont_on_warnings: this.state.contOnWarnings
+      qname:              this.state.qName,
+      container_image:    this.state.dockerImage,
+      image_pull_policy:  this.state.imagePullPolicy,
+      content:            this.state.contentB64 || '',
+      entrypoint:         parse(this.state.entryPoint),
+      run:                parse(this.state.run),
+      working_directory:  this.state.workingDir,
+      env_vars:           this.state.envVars,
+      secret_refs:        this.state.secretMaps,
+      secret_file_type:   this.state.secretFileType,
+      cont_on_warnings:   this.state.contOnWarnings
     };
   }
 
