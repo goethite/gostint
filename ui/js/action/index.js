@@ -28,6 +28,8 @@ class Action extends Component {
     super(props);
 
     this.state = {
+      actionShow: true,
+      resultsShow: false,
       advancedForm: false,
       errorMessage: '',
       contentErrorMessage: '',
@@ -43,12 +45,15 @@ class Action extends Component {
       secretFileType: 'yaml',
       contOnWarnings: false,
       secretMaps: [],
-      envVars: []
+      envVars: [],
+
+      results: {}
     };
     console.log('in Action this:', this);
 
     this.advancedSimple = this.advancedSimple.bind(this);
     this.run = this.run.bind(this);
+    this.resultsReturn = this.resultsReturn.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.handleSecretMaps = this.handleSecretMaps.bind(this);
     this.handleEnvVars = this.handleEnvVars.bind(this);
@@ -110,200 +115,242 @@ class Action extends Component {
   render() {
     return (
       <div>
-        <Form className={css.form} onSubmit={this.run} name="actionForm">
-          <h4 className={css.hdr}>Action</h4>
-          <Container>
-            <br/>
-            <Button
-              color="secondary"
-              className={css.advButton}
-              onClick={this.advancedSimple}>{this.state.advancedForm ? 'Simple' : 'Advanced'}</Button>
-            <br/>
-            <Row>
-              <Col md="3">
-                <FormGroup>
-                  <Label for="dockerImage">Docker Image:</Label>
-                  <Input
-                    type="text"
-                    name="dockerImage"
-                    id="dockerImage"
-                    placeholder="Enter docker image:tag"
-                    onChange={this.handleChange}
-                    value={this.state.dockerImage}
-                  />
-                </FormGroup>
-              </Col>
-
-              <Col md="3">
-                <FormGroup>
-                  <Label for="run">Container Run Command:</Label>
-                  <Input
-                    type="text"
-                    name="run"
-                    id="run"
-                    placeholder="Enter A Run Command"
-                    onChange={this.handleChange}
-                    value={this.state.run}
-                  />
-                </FormGroup>
-              </Col>
-            </Row>
-
-            <Collapse isOpen={this.state.advancedForm}>
+        <Collapse isOpen={this.state.actionShow}>
+          <Form className={css.form} onSubmit={this.run} name="actionForm">
+            <h4 className={css.hdr}>Action</h4>
+            <Container>
+              <br/>
+              <Button
+                color="secondary"
+                className={css.advButton}
+                onClick={this.advancedSimple}>{this.state.advancedForm ? 'Simple' : 'Advanced'}</Button>
+              <br/>
               <Row>
                 <Col md="3">
                   <FormGroup>
-                    <Label for="imagePullPolicy">Image Pull Policy:</Label>
-                    <Input
-                      type="select"
-                      name="imagePullPolicy"
-                      id="imagePullPolicy"
-                      value={this.state.imagePullPolicy}
-                      placeholder="Enter Image Pull Policy: 'IfNotPresent' or 'Always'"
-                      onChange={this.handleChange}
-                    >
-                      <option>IfNotPresent</option>
-                      <option>Always</option>
-                    </Input>
-                  </FormGroup>
-                </Col>
-
-                <Col md="3">
-                  <FormGroup>
-                    <Label for="gostintRole">GoStint Vault AppRole Name:</Label>
+                    <Label for="dockerImage">Docker Image:</Label>
                     <Input
                       type="text"
-                      name="gostintRole"
-                      id="gostintRole"
-                      value={this.state.gostintRole}
-                      placeholder="Enter GoStint Vault AppRole Name"
+                      name="dockerImage"
+                      id="dockerImage"
+                      placeholder="Enter docker image:tag"
                       onChange={this.handleChange}
+                      value={this.state.dockerImage}
                     />
                   </FormGroup>
                 </Col>
 
                 <Col md="3">
                   <FormGroup>
-                    <Label for="qName">Queue Name:</Label>
+                    <Label for="run">Container Run Command:</Label>
                     <Input
                       type="text"
-                      name="qName"
-                      id="qName"
-                      placeholder="Enter A Queue Name (optional)"
+                      name="run"
+                      id="run"
+                      placeholder="Enter A Run Command"
                       onChange={this.handleChange}
-                      value={this.state.qName}
+                      value={this.state.run}
                     />
-                    <FormText>
-                      Queues serialise jobs.  Jobs in different queues run in
-                      parallel.
-                    </FormText>
                   </FormGroup>
                 </Col>
               </Row>
 
-              <FormGroup>
-                <Label for="content">Content:</Label>
-                <Input
-                  type="file"
-                  name="content"
-                  id="content"
-                  onChange={this.handleChange}
-                  defaultValue={this.state.content}
-                  accept="application/gzip"
-                />
-                <FormText>
-                  Select a Gzipped Tar file of content to be injected into the container for
-                  your job.
-                </FormText>
-                <ErrorMsg>{this.state.contentErrorMessage}</ErrorMsg>
-              </FormGroup>
-
-              <Row>
-                <Col md="3">
-                  <FormGroup>
-                    <Label for="entryPoint">Container Entry Point:</Label>
-                    <Input
-                      type="text"
-                      name="entryPoint"
-                      id="entryPoint"
-                      placeholder="Enter Container Entry Point"
-                      onChange={this.handleChange}
-                      value={this.state.entryPoint}
-                    />
-                    <FormText>
-                      Leave blank for default entrypoint (optional).
-                    </FormText>
-                  </FormGroup>
-                </Col>
-
-                <Col md="3">
-                  <FormGroup>
-                    <Label for="workingDir">Container Working Directory:</Label>
-                    <Input
-                      type="text"
-                      name="workingDir"
-                      id="workingDir"
-                      placeholder="Enter Container Working Directory"
-                      onChange={this.handleChange}
-                      value={this.state.workingDir}
-                    />
-                    <FormText>
-                      Leave blank for default.
-                    </FormText>
-                  </FormGroup>
-                </Col>
-
-                <Col md="3">
-                  <FormGroup>
-                    <Label for="secretFileType">Injected Secret File Type:</Label>
-                    <Input
-                      type="select"
-                      name="secretFileType"
-                      id="secretFileType"
-                      value={this.state.secretFileType}
-                      onChange={this.handleChange}
-                      >
-                        <option>yaml</option>
-                        <option>json</option>
-                      </Input>
-                  </FormGroup>
-                </Col>
-              </Row>
-
-              <Row>
-                <Col>
-                  <FormGroup check inline>
-                    <Label check>
+              <Collapse isOpen={this.state.advancedForm}>
+                <Row>
+                  <Col md="3">
+                    <FormGroup>
+                      <Label for="imagePullPolicy">Image Pull Policy:</Label>
                       <Input
-                        type="checkbox"
-                        name="contOnWarnings"
-                        id="contOnWarnings"
+                        type="select"
+                        name="imagePullPolicy"
+                        id="imagePullPolicy"
+                        value={this.state.imagePullPolicy}
+                        placeholder="Enter Image Pull Policy: 'IfNotPresent' or 'Always'"
                         onChange={this.handleChange}
-                        checked={this.state.contOnWarnings}
-                        value="toggle"
+                      >
+                        <option>IfNotPresent</option>
+                        <option>Always</option>
+                      </Input>
+                    </FormGroup>
+                  </Col>
+
+                  <Col md="3">
+                    <FormGroup>
+                      <Label for="gostintRole">GoStint Vault AppRole Name:</Label>
+                      <Input
+                        type="text"
+                        name="gostintRole"
+                        id="gostintRole"
+                        value={this.state.gostintRole}
+                        placeholder="Enter GoStint Vault AppRole Name"
+                        onChange={this.handleChange}
                       />
-                      Continue on Warnings
-                    </Label>
-                  </FormGroup>
+                    </FormGroup>
+                  </Col>
+
+                  <Col md="3">
+                    <FormGroup>
+                      <Label for="qName">Queue Name:</Label>
+                      <Input
+                        type="text"
+                        name="qName"
+                        id="qName"
+                        placeholder="Enter A Queue Name (optional)"
+                        onChange={this.handleChange}
+                        value={this.state.qName}
+                      />
+                      <FormText>
+                        Queues serialise jobs.  Jobs in different queues run in
+                        parallel.
+                      </FormText>
+                    </FormGroup>
+                  </Col>
+                </Row>
+
+                <FormGroup>
+                  <Label for="content">Content:</Label>
+                  <Input
+                    type="file"
+                    name="content"
+                    id="content"
+                    onChange={this.handleChange}
+                    defaultValue={this.state.content}
+                    accept="application/gzip"
+                  />
                   <FormText>
-                  Continue to run job even if vault reported warnings when looking up secret refs.
+                    Select a Gzipped Tar file of content to be injected into the container for
+                    your job.
                   </FormText>
-                </Col>
-              </Row>
+                  <ErrorMsg>{this.state.contentErrorMessage}</ErrorMsg>
+                </FormGroup>
 
-              <SecretMaps secretMaps={this.state.secretMaps} onChange={this.handleSecretMaps} />
-              <EnvVars envVars={this.state.envVars} onChange={this.handleEnvVars} />
+                <Row>
+                  <Col md="3">
+                    <FormGroup>
+                      <Label for="entryPoint">Container Entry Point:</Label>
+                      <Input
+                        type="text"
+                        name="entryPoint"
+                        id="entryPoint"
+                        placeholder="Enter Container Entry Point"
+                        onChange={this.handleChange}
+                        value={this.state.entryPoint}
+                      />
+                      <FormText>
+                        Leave blank for default entrypoint (optional).
+                      </FormText>
+                    </FormGroup>
+                  </Col>
 
-            </Collapse>
+                  <Col md="3">
+                    <FormGroup>
+                      <Label for="workingDir">Container Working Directory:</Label>
+                      <Input
+                        type="text"
+                        name="workingDir"
+                        id="workingDir"
+                        placeholder="Enter Container Working Directory"
+                        onChange={this.handleChange}
+                        value={this.state.workingDir}
+                      />
+                      <FormText>
+                        Leave blank for default.
+                      </FormText>
+                    </FormGroup>
+                  </Col>
 
-            <br/>
-            <Button color="primary" className={css.runButton} type="submit">Run</Button>
-            <br/>
-            <ErrorMsg>{this.state.errorMessage}</ErrorMsg>
-          </Container>
-        </Form>
+                  <Col md="3">
+                    <FormGroup>
+                      <Label for="secretFileType">Injected Secret File Type:</Label>
+                      <Input
+                        type="select"
+                        name="secretFileType"
+                        id="secretFileType"
+                        value={this.state.secretFileType}
+                        onChange={this.handleChange}
+                        >
+                          <option>yaml</option>
+                          <option>json</option>
+                        </Input>
+                    </FormGroup>
+                  </Col>
+                </Row>
+
+                <Row>
+                  <Col>
+                    <FormGroup check inline>
+                      <Label check>
+                        <Input
+                          type="checkbox"
+                          name="contOnWarnings"
+                          id="contOnWarnings"
+                          onChange={this.handleChange}
+                          checked={this.state.contOnWarnings}
+                          value="toggle"
+                        />
+                        Continue on Warnings
+                      </Label>
+                    </FormGroup>
+                    <FormText>
+                    Continue to run job even if vault reported warnings when looking up secret refs.
+                    </FormText>
+                  </Col>
+                </Row>
+
+                <SecretMaps secretMaps={this.state.secretMaps} onChange={this.handleSecretMaps} />
+                <EnvVars envVars={this.state.envVars} onChange={this.handleEnvVars} />
+
+              </Collapse>
+
+              <br/>
+              <Button color="primary" className={css.runButton} type="submit">Run</Button>
+              <br/>
+              <ErrorMsg>{this.state.errorMessage}</ErrorMsg>
+            </Container>
+          </Form>
+        </Collapse>
+
+        <Collapse isOpen={this.state.resultsShow}>
+          <br/>
+          <Button color="primary" onClick={this.resultsReturn}>&lt;&lt; Return</Button>
+          <br/>
+          <Table>
+            <thead>
+              <tr>
+                <th>Queue</th>
+                <th>Status</th>
+                <th>Started</th>
+                <th>Ended</th>
+                <th>Return Code</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{this.state.results.qname}</td>
+                <td>{this.state.results.status}</td>
+                <td>{this.state.results.started}</td>
+                <td>{this.state.results.ended}</td>
+                <td>{this.state.results.return_code}</td>
+              </tr>
+            </tbody>
+          </Table>
+
+          <pre>
+            {this.state.results.output}
+          </pre>
+
+        </Collapse>
       </div>
     );
+  }
+
+  resultsReturn() {
+    this.setState(() => {
+      return {
+        actionShow: true,
+        resultsShow: false
+      };
+    });
   }
 
   getBase64(file) {
@@ -323,7 +370,12 @@ class Action extends Component {
     event.preventDefault();
 
     this.setState(() => {
-      return {errorMessage: ''};
+      return {
+        errorMessage: '',
+        actionShow: false,
+        resultsShow: true,
+        results: {}
+      };
     }, () => {
       console.log('post action here');
 
@@ -339,8 +391,8 @@ class Action extends Component {
       // Get a minimal token for job submission to gostint
       this.vault('v1/auth/token/create', 'POST', {
         policies: ['default'],
-        ttl: '1h',
-        num_uses: 1,
+        ttl: '6h',
+        // num_uses: 1,
         display_name: 'gostint_ui'
       })
       .then((res) => {
@@ -429,6 +481,40 @@ class Action extends Component {
       })
       .then((data) => {
         console.log('job post data:', data);
+
+        (function (self, apiToken, data) {
+          const intvl = setInterval(() => {
+            self.gostint(
+              `v1/api/job/${data._id}`,
+              'GET',
+              null,
+              {
+                'X-Auth-Token': apiToken,
+                'Content-Type': 'application/json'
+              }
+            )
+            .then((queueRes) => {
+              console.log('queueRes:', queueRes);
+              return queueRes.json();
+            })
+            .then((queue) => {
+              console.log('queue:', queue);
+              self.setState(() => {
+                return {
+                  results: queue
+                };
+              });
+
+              if (queue.status !== 'queued' && queue.status !== 'running' ) {
+                clearInterval(intvl);
+              }
+            })
+            .catch((err) => {
+              console.error('err:', err);
+            });
+          }, 2000);
+        })(this, apiToken, data);
+
       })
       .catch((err) => {
         console.error('err:', err);
