@@ -15,6 +15,9 @@ import {
   Table
 } from 'reactstrap';
 
+import { default as AnsiUp } from 'ansi_up';
+const ansi_up = new AnsiUp();
+
 import ErrorMsg from '../error_message.js';
 import EnvVars from './env_vars.js';
 import SecretMaps from './secret_maps.js';
@@ -312,7 +315,10 @@ class Action extends Component {
 
         <Collapse isOpen={this.state.resultsShow}>
           <br/>
-          <Button color="primary" onClick={this.resultsReturn}>&lt;&lt; Return</Button>
+          <Button
+            color="primary"
+            className={css.returnButton}
+            onClick={this.resultsReturn}>&lt;&lt; Return</Button>
           <br/>
           <Table>
             <thead>
@@ -335,9 +341,15 @@ class Action extends Component {
             </tbody>
           </Table>
 
-          <pre>
-            {this.state.results.output}
-          </pre>
+          <h3 className={css.outputHdr}>Output:</h3>
+          {this.state.results.output ?
+            <pre className={css.output}
+              dangerouslySetInnerHTML={{
+              __html: ansi_up.ansi_to_html(this.state.results.output)
+            }}></pre>
+          :
+            <h3 className={css.outputElips}>...</h3>
+          }
 
         </Collapse>
       </div>
