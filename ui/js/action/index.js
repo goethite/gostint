@@ -350,6 +350,7 @@ class Action extends Component {
           :
             <h3 className={css.outputElips}>...</h3>
           }
+          <ErrorMsg>{this.state.errorMessage}</ErrorMsg>
 
         </Collapse>
       </div>
