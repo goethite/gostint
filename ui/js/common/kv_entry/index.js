@@ -10,6 +10,8 @@ import {
   Table
 } from 'reactstrap';
 
+import { FaTrashAlt } from 'react-icons/fa';
+
 import css from './style.css';
 
 class KVEntry extends Component {
@@ -27,6 +29,7 @@ class KVEntry extends Component {
     console.log('KVEntry props:', props);
 
     this.addKV = this.addKV.bind(this);
+    this.deleteKV = this.deleteKV.bind(this);
     this.handleChange = this.handleChange.bind(this);
   }
 
@@ -94,7 +97,18 @@ class KVEntry extends Component {
                 return (
                   <tr className="d-flex" key={i.toString()}>
                     <td className="col-md-3">{r.key}</td>
-                    <td className="col-md-9">{r.val}</td>
+                    <td className="col-md-9">
+                      {r.val}
+                      <Button color="danger"
+                        className={css.deleteButton}
+                        onClick={() => {
+                          this.setState((state) => {
+                            const kvs = Object.assign([], state.kvs);
+                            delete kvs[i];
+                            return { kvs };
+                          })
+                        }}><FaTrashAlt /></Button>
+                    </td>
                   </tr>
                 );
               })}
@@ -121,6 +135,10 @@ class KVEntry extends Component {
         val: ''
       };
     });
+  }
+
+  deleteKV(event) {
+    console.log('deleteKV event:', event);
   }
 }
 

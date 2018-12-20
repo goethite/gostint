@@ -34,3 +34,9 @@
 :local(.rowEnvsSecs) {
   margin-top: 16px;
 }
+
+:local(.deleteButton) {
+  margin-top: -8px;
+  position: absolute;
+  right: 0px;
+}
