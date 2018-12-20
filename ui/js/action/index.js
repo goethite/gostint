@@ -596,14 +596,21 @@ class Action extends Component {
     });
   }
 
-  handleSecretMaps(action, row) {
-    console.log('in handleSecretMaps, action:', action, 'row:', row);
+  handleSecretMaps(action, row, idx) {
+    console.log('in handleSecretMaps, action:', action, 'row:', row, 'idx:', idx);
     switch(action) {
       case 'add':
         this.setState((state, props) => {
-          const sr = state.secretMaps
+          const sr = Object.assign([], state.secretMaps);
           sr.push(row);
           return {secretMaps: sr};
+        });
+        break;
+      case 'delete':
+        this.setState((state) => {
+          const sr = Object.assign([], state.secretMaps);
+          sr.splice(idx, 1);
+          return { secretMaps: sr };
         });
         break;
       default:
@@ -611,14 +618,21 @@ class Action extends Component {
     }
   }
 
-  handleEnvVars(action, row) {
-    console.log('in handleEnvVars, action:', action, 'row:', row);
+  handleEnvVars(action, row, idx) {
+    console.log('in handleEnvVars, action:', action, 'row:', row, 'idx:', idx);
     switch(action) {
       case 'add':
         this.setState((state, props) => {
-          const es = state.envVars
+          const es = Object.assign([], state.envVars);
           es.push(row);
           return {envVars: es};
+        });
+        break;
+      case 'delete':
+        this.setState((state) => {
+          const es = Object.assign([], state.envVars);
+          es.splice(idx, 1);
+          return { envVars: es };
         });
         break;
       default:

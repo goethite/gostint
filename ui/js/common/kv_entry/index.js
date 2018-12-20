@@ -22,7 +22,7 @@ class KVEntry extends Component {
       key: '',
       val: '',
       onChange: props.onChange || null,
-      kvs: props.kvs || [],
+      // kvs: props.kvs || [],
       label: props.label || 'Enter Keys/Values',
       placeholders: props.placeholders || ['key', 'value']
     };
@@ -93,21 +93,18 @@ class KVEntry extends Component {
                 </tr>
               </thead>
               <tbody>
-              {this.state.kvs.map((r, i) => {
+              {this.props.kvs.map((r, i) => {
                 return (
-                  <tr className="d-flex" key={i.toString()}>
+                  <tr
+                    className="d-flex"
+                    key={i.toString()}>
                     <td className="col-md-3">{r.key}</td>
                     <td className="col-md-9">
                       {r.val}
                       <Button color="danger"
                         className={css.deleteButton}
-                        onClick={() => {
-                          this.setState((state) => {
-                            const kvs = Object.assign([], state.kvs);
-                            delete kvs[i];
-                            return { kvs };
-                          })
-                        }}><FaTrashAlt /></Button>
+                        data-item={i}
+                        onClick={this.deleteKV}><FaTrashAlt /></Button>
                     </td>
                   </tr>
                 );
@@ -137,8 +134,11 @@ class KVEntry extends Component {
     });
   }
 
-  deleteKV(event) {
-    console.log('deleteKV event:', event);
+  deleteKV(e) {
+    const idx = e.currentTarget.getAttribute('data-item');
+    console.log('in deleteKV idx:', idx);
+
+    this.state.onChange('delete', {}, idx);
   }
 }
 
