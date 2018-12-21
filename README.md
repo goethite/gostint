@@ -87,6 +87,13 @@ A sister project called [gostint-client](https://github.com/goethite/gostint-cli
 is also available to simplify the client side integrations with Hashicorp Vault
 and drive the [gostint api](https://goethite.github.io/gostint/docs/1100_api_v1_job/).
 
+### Enabling the gostint UI
+To enable the experimental web UI in gostint, simply pass it `GOSTINT_UI=1`:
+```bash
+... GOSTINT_UI=1 gostint
+```
+Access the UI at https://127.0.0.1:3232
+
 ## Developer Guide
 
 Development and testing is done in a Vagrant/Docker environment:

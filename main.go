@@ -123,8 +123,15 @@ func Routes() *chi.Mux {
 		r.Mount("/api/vault", vault.Routes())
 	})
 
-	// Note: http.FileServer will automatically resolve Content-Type headers
-	router.Mount("/", http.FileServer(ui.FS(false)))
+	router.Get("/login", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "../", 301)
+	})
+
+	if os.Getenv("GOSTINT_UI") == "1" {
+		logmsg.Info("Enabling UI")
+		// Note: http.FileServer will automatically resolve Content-Type headers
+		router.Mount("/", http.FileServer(ui.FS(false)))
+	}
 
 	return router
 }
@@ -142,9 +149,9 @@ func main() {
 
 	serverPort := 3232
 	if os.Getenv("GOSTINT_PORT") != "" {
-		sp, err := strconv.Atoi(os.Getenv("GOSTINT_PORT"))
-		if err != nil {
-			panic(err)
+		sp, err2 := strconv.Atoi(os.Getenv("GOSTINT_PORT"))
+		if err2 != nil {
+			panic(err2)
 		}
 		serverPort = sp
 	}

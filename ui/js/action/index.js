@@ -52,7 +52,6 @@ class Action extends Component {
 
       results: {}
     };
-    console.log('in Action this:', this);
 
     this.advancedSimple = this.advancedSimple.bind(this);
     this.run = this.run.bind(this);
@@ -64,8 +63,6 @@ class Action extends Component {
 
   handleChange(event) {
     const target = event.target
-    console.log('target files:', target.files);
-    console.log('target: name:', target.name, 'value:', target.value);
     if (target.name) {
       switch(target.name) {
         case 'contOnWarnings':
@@ -79,7 +76,6 @@ class Action extends Component {
           this.setState({contentErrorMessage: ''}, () => {
             this.getBase64(target.files[0])
             .then((data) => {
-              console.log('data:', data);
               if (!data || data === '') { // Cancel pressed
                 this.setState({
                   'content': '',
@@ -88,7 +84,6 @@ class Action extends Component {
                 return;
               }
               const parts = data.split(',');
-              console.log('parts:', parts);
               if (parts[0].search('gzip') === -1) {
                 this.setState({
                   contentErrorMessage: 'not a gzip file',
@@ -335,8 +330,12 @@ class Action extends Component {
                 <td>{this.state.results.qname}</td>
                 <td>{this.state.results.status}</td>
                 <td>{this.state.results.started}</td>
-                <td>{this.state.results.ended}</td>
-                <td>{this.state.results.return_code}</td>
+                <td>{
+                  (this.state.results.status && this.state.results.status.match(/(running|queued)/)) ? '' : this.state.results.ended
+                }</td>
+                <td>{
+                  (this.state.results.status && this.state.results.status.match(/(running|queued)/)) ? '' : this.state.results.return_code
+                }</td>
               </tr>
             </tbody>
           </Table>
@@ -379,7 +378,6 @@ class Action extends Component {
   }
 
   run() {
-    console.log('run clicked this:', this);
     event.preventDefault();
 
     this.setState(() => {
@@ -390,12 +388,8 @@ class Action extends Component {
         results: {}
       };
     }, () => {
-      console.log('post action here');
-
       // see https://github.com/goethite/gostint-client/blob/master/clientapi/clientapi.go
-
       const job = this.buildJob()
-      console.log('job:', job);
       let apiToken;
       let wrapSecretID;
       let encryptedJob;
@@ -409,15 +403,12 @@ class Action extends Component {
         display_name: 'gostint_ui'
       })
       .then((res) => {
-        console.log('create token res:', res);
         apiToken = res.auth.client_token;
 
         // Get secret id for gostint approle
         return this.vault(`v1/auth/approle/role/${this.state.gostintRole}/secret-id`, 'POST');
       })
       .then((res) => {
-        console.log('get secret_id res:', res);
-
         // Wrap the secret id
         return this.vault(
           'v1/sys/wrapping/wrap',
@@ -427,7 +418,6 @@ class Action extends Component {
         );
       })
       .then((res) => {
-        console.log('get wrapped secret_id res:', res);
         wrapSecretID = res.wrap_info.token;
 
         // Encrypt the job payload
@@ -439,8 +429,6 @@ class Action extends Component {
         );
       })
       .then((res) => {
-        console.log('get encrypted job res:', res);
-
         encryptedJob = res.data.ciphertext;
 
         // get limited use token for cubbyhole
@@ -452,10 +440,7 @@ class Action extends Component {
         });
       })
       .then((res) => {
-        console.log('cubbyhole token res:', res);
         cubbyToken = res.auth.client_token;
-
-        console.log('encryptedJob:', encryptedJob);
 
         // Put encrypted job in cubbyhole
         return this.vault(
@@ -466,8 +451,6 @@ class Action extends Component {
         );
       })
       .then(() => {
-        console.log('cubbyhole post');
-
         // create job wrapper
         const jWrap = {
           qname: this.state.qName,
@@ -475,7 +458,6 @@ class Action extends Component {
           cubby_path: 'cubbyhole/job',
           wrap_secret_id: wrapSecretID
         };
-        console.log('jWrap:', jWrap);
 
         // submit job
         return this.gostint(
@@ -489,12 +471,9 @@ class Action extends Component {
         );
       })
       .then((res) => {
-        console.log('job post res:', res);
         return res.json()
       })
       .then((data) => {
-        console.log('job post data:', data);
-
         (function (self, apiToken, data) {
           const intvl = setInterval(() => {
             self.gostint(
@@ -507,11 +486,9 @@ class Action extends Component {
               }
             )
             .then((queueRes) => {
-              console.log('queueRes:', queueRes);
               return queueRes.json();
             })
             .then((queue) => {
-              console.log('queue:', queue);
               self.setState(() => {
                 return {
                   results: queue
@@ -524,6 +501,7 @@ class Action extends Component {
             })
             .catch((err) => {
               console.error('err:', err);
+              this.setState({errorMessage: err.message});
             });
           }, 2000);
         })(this, apiToken, data);
@@ -557,7 +535,6 @@ class Action extends Component {
     if (!headers['X-Vault-Token']) {
       headers['X-Vault-Token'] = this.props.vaultAuth.token;
     }
-    console.log('vault: path:', path, 'method:', method, 'data:', data, 'headers:', headers);
 
     return fetch(this.props.URLs.vault + '/' + path, {
       headers,
@@ -579,8 +556,6 @@ class Action extends Component {
   }
 
   gostint(path, method, data, headers) {
-    console.log('gostint: path:', path, 'method:', method, 'data:', data, 'headers:', headers);
-
     return fetch(this.props.URLs.gostint + '/' + path, {
       headers,
       method: method || 'GET',
@@ -589,16 +564,12 @@ class Action extends Component {
   }
 
   advancedSimple() {
-    console.log('in advancedSimple');
     this.setState((state, props) => {
-      console.log('advancedSimple state:', state);
-      console.log('advancedSimple props:', props);
       return {advancedForm: !state.advancedForm};
     });
   }
 
   handleSecretMaps(action, row, idx) {
-    console.log('in handleSecretMaps, action:', action, 'row:', row, 'idx:', idx);
     switch(action) {
       case 'add':
         this.setState((state, props) => {
@@ -620,7 +591,6 @@ class Action extends Component {
   }
 
   handleEnvVars(action, row, idx) {
-    console.log('in handleEnvVars, action:', action, 'row:', row, 'idx:', idx);
     switch(action) {
       case 'add':
         this.setState((state, props) => {

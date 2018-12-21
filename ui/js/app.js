@@ -16,7 +16,6 @@ import ErrorMsg from './error_message.js';
 class App extends Component {
   constructor(props) {
     super(props);
-    console.log('App in constructor this:', this);
 
     this.state = {
       token: (this.props ? this.props.vaultAuth.token : null)

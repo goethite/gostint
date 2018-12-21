@@ -51,15 +51,7 @@ render(
 );
 
 function handleLogin(data) {
-  console.log('handleLogin data:', data);
   vaultAuth.token = data.tokenData;
   URLs.gostint = data.originURL;
   URLs.vault = data.vaultURL;
-
-  // console.log('handleLogin from:', from);
-  //return <Redirect to={from} />
-  // withRouter(({ history }) => {
-  //   console.log('history:', history);
-  //   history.push(from);
-  // });
 }

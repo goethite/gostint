@@ -9,7 +9,6 @@ import ErrorMsg from './error_message.js';
 export class Login extends Component {
   constructor(props) {
     super(props);
-    console.log('props:', props);
 
     let { from } = props.location.state || { from: { pathname: "/" } };
 
@@ -40,7 +39,6 @@ export class Login extends Component {
       return res.json();
     })
     .then((res) => {
-      console.log('GET vault info from gostint', res);
       this.setState(() => ({
         vaultAddr: res.vault_external_addr
       }));
@@ -63,9 +61,14 @@ export class Login extends Component {
 
           <label className="loginLabel">with a Vault Token:</label>
           <InputGroup className="loginInput">
-            <Input name="token" placeholder="Token" onChange={this.handleChange} />
+            <Input
+              type="password"
+              name="token"
+              placeholder="Token"
+              onChange={this.handleChange} />
           </InputGroup>
 
+          {/* TODO:
           <label className="loginLabel">or Username and Password:</label>
           <InputGroup className="loginInput">
             <Input name="userName" placeholder="User name" onChange={this.handleChange} />
@@ -83,6 +86,7 @@ export class Login extends Component {
           <InputGroup className="loginInput">
             <Input name="secretId" placeholder="Secret ID" onChange={this.handleChange} />
           </InputGroup>
+          */}
 
           <br/>
           <Button color="primary" className="loginButton" type="submit">Login</Button>
@@ -104,8 +108,6 @@ export class Login extends Component {
 
   login(event) {
     event.preventDefault();
-    console.log('event:', event);
-    console.log('state:', this.state);
 
     this.setState(() => ({errorMessage: ''}));
 
@@ -116,7 +118,6 @@ export class Login extends Component {
 
     if (this.state.token !== '') {
       const vaultURL = this.state.vaultAddr + '/v1/auth/token/lookup-self';
-      console.log('fetching', vaultURL);
       fetch(vaultURL, {
         headers: {
           'X-Vault-Token': this.state.token
@@ -132,13 +133,9 @@ export class Login extends Component {
         return res.json();
       })
       .then((res) => {
-        console.log('GET token self', res);
         if (res.errors) {
-          console.log('in error');
           this.setState(() => ({errorMessage: res.errors.join(', ')}));
-          console.log('this.state.errorMessage:', this.state.errorMessage);
         } else {
-          console.log('logged in this.state.sessionFn:', this.state.sessionFn);
           if (this.state.sessionFn) {
             this.state.sessionFn({
               tokenData: this.state.token,
@@ -147,7 +144,6 @@ export class Login extends Component {
               vaultURL: this.state.vaultAddr
             });
           }
-          console.log("login props:", this.props)
           this.props.history.push("/");
         }
       })

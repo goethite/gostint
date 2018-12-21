@@ -22,11 +22,9 @@ class KVEntry extends Component {
       key: '',
       val: '',
       onChange: props.onChange || null,
-      // kvs: props.kvs || [],
       label: props.label || 'Enter Keys/Values',
       placeholders: props.placeholders || ['key', 'value']
     };
-    console.log('KVEntry props:', props);
 
     this.addKV = this.addKV.bind(this);
     this.deleteKV = this.deleteKV.bind(this);
@@ -35,7 +33,6 @@ class KVEntry extends Component {
 
   handleChange(event) {
     const target = event.target
-    console.log('target: name:', target.name, 'value:', target.value);
     if (target.name) {
       this.setState({
         [target.name]: target.value
@@ -45,8 +42,7 @@ class KVEntry extends Component {
 
   render() {
     return (
-      <div>
-        <hr/>
+      <div className={css.container}>
         <Row className={css.rowEnvsSecs}>
           <Col><Label>{this.state.label}:</Label></Col>
         </Row>
@@ -118,8 +114,6 @@ class KVEntry extends Component {
   }
 
   addKV() {
-    console.log('in addKV this:', this);
-
     this.state.onChange('add', {
       key: this.state.key,
       val: this.state.val
@@ -136,8 +130,6 @@ class KVEntry extends Component {
 
   deleteKV(e) {
     const idx = e.currentTarget.getAttribute('data-item');
-    console.log('in deleteKV idx:', idx);
-
     this.state.onChange('delete', {}, idx);
   }
 }
