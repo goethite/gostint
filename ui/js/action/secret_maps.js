@@ -14,7 +14,7 @@ class SecretMaps extends Component {
         kvs={this.props.secretMaps}
         onChange={this.props.onChange}
         label="Add Vault Secret Paths/Mappings"
-        placeholders={['Secret Ref', 'Vault Secret Path']}
+        placeholders={['Secret Ref', 'Vault Secret Path [secret/mysecret.mypassword]']}
       />
     );
   }

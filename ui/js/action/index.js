@@ -545,8 +545,8 @@ class Action extends Component {
       entrypoint:         parse(this.state.entryPoint),
       run:                parse(this.state.run),
       working_directory:  this.state.workingDir,
-      env_vars:           this.state.envVars,
-      secret_refs:        this.state.secretMaps,
+      env_vars:           this.state.envVars.map(er => `${er.key}=${er.val}`),
+      secret_refs:        this.state.secretMaps.map(sr => `${sr.key}@${sr.val}`),
       secret_file_type:   this.state.secretFileType,
       cont_on_warnings:   this.state.contOnWarnings
     };
