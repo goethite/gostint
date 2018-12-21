@@ -1,0 +1,52 @@
+
+:local(.container) {
+  border-color: #007bff;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 10px;
+  margin-top: 10px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+:local(.advButton) {
+  margin-bottom: 20px;
+}
+
+:local(.form) {
+  border-color: #007bff;
+  border-style: solid;
+  border-width: 3px;
+  border-radius: 10px;
+  margin: 50px;
+  padding: 10px;
+}
+
+:local(.hdr) {
+  text-decoration: underline;
+}
+
+:local(.input) {
+  padding-left: 50px;
+  padding-right: 50px;
+}
+
+:local(.runButton) {
+  /* margin-left: 10px; */
+  padding: 10px 20px 10px 20px;
+  font-size: 150%;
+}
+
+:local(.addButton) {
+  margin-bottom: 3px;
+}
+
+:local(.rowEnvsSecs) {
+  margin-top: 5px;
+}
+
+:local(.deleteButton) {
+  margin-top: -8px;
+  position: absolute;
+  right: 0px;
+}

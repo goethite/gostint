@@ -38,6 +38,14 @@ func tasks(p *do.Project) {
 		token = strings.Trim(token, " \t\n")
 	})
 
+	p.Task("gogenerate", nil, func(c *do.Context) {
+		c.Bash(`
+      echo "Generate static content"
+      go generate
+      echo "Generate static content complete"
+    `)
+	})
+
 	p.Task("default", do.S{"gettoken"}, func(c *do.Context) {
 		c.Start(`GOSTINT_SSL_CERT=etc/cert.pem GOSTINT_SSL_KEY=etc/key.pem GOSTINT_DBAUTH_TOKEN={{.token}} GOSTINT_DBURL=127.0.0.1:27017 main.go`, do.M{"token": token})
 	}).Src("**/*.go")

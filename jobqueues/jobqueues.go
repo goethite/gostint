@@ -34,13 +34,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/avast/retry-go"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/gbevan/gostint/approle"
 	"github.com/gbevan/gostint/cleanup"
-	"github.com/gbevan/gostint/health"
 	"github.com/gbevan/gostint/logmsg"
+	"github.com/gbevan/gostint/state"
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/hashicorp/vault/api"
@@ -119,6 +120,17 @@ func Init(db *mgo.Database, appRole *AppRole, nodeUUID string) {
 	jobQueues.AppRole = appRole
 	jobQueues.NodeUUID = nodeUUID
 
+	clientAPIVer, dockerInfo, err := GetDockerInfo()
+	if err != nil {
+		logmsg.Error("Failed to get docker info: %v", err)
+		panic(err)
+	}
+	logmsg.Info(
+		"Starting job queue. Docker client api: v%v, server: v%s",
+		clientAPIVer,
+		dockerInfo.ServerVersion,
+	)
+
 	// start go routine to loop on the queues collection for new work
 	// Qname defines the FIFO queue.
 	go requestHandler()
@@ -129,13 +141,26 @@ func Init(db *mgo.Database, appRole *AppRole, nodeUUID string) {
 	go cleanup.Images()
 }
 
+// GetDockerInfo retrieves details of the docker client api and server info.
+func GetDockerInfo() (string, *types.Info, error) {
+	vctx, vcli, err := getDockerClient()
+	if err != nil {
+		return "", nil, err
+	}
+	vInfo, err := vcli.Info(*vctx)
+	if err != nil {
+		return vcli.ClientVersion(), nil, err
+	}
+	return vcli.ClientVersion(), &vInfo, nil
+}
+
 func requestHandler() {
 	// TODO: Provide a Wake channel for immediate pull ???
 	db := jobQueues.Db
 	c := db.C("queues")
 
 	for {
-		if health.GetState() == "active" {
+		if state.GetState() == "active" {
 			var queues []string
 			err := c.Find(bson.M{}).Distinct("qname", &queues)
 			if err != nil {
@@ -351,35 +376,59 @@ func (job *Job) pullDockerImage(ctx *context.Context, cli *client.Client) (strin
 	}
 
 	if !imgAlreadyPulled || job.ImagePullPolicy == "Always" {
-		reader, err2 := cli.ImagePull(*ctx, imgRef, types.ImagePullOptions{})
-		if err2 != nil {
-			logmsg.Error("ImagePull imgRef: %s, %v", imgRef, err2)
-			return "", err2
-		}
+		var reader io.ReadCloser
+		// var err2 error
+		err = retry.Do(
+			func() error {
+				logmsg.Info("Trying to pull image %s", imgRef)
+				reader, err = cli.ImagePull(*ctx, imgRef, types.ImagePullOptions{})
+				if err != nil {
+					logmsg.Warn("ImagePull imgRef: %s, %v, will retry", imgRef, err)
+					return err
+				}
+				// return nil
+				// },
+				// )
+				// if err != nil {
+				// 	logmsg.Error("ImagePull imgRef: %s, %v, exceeded retries", imgRef, err)
+				// 	return "", err
+				// }
 
-		// This is currently needed to ensure images are downloaded before we
-		// move on to creating containers...
-		scanner := bufio.NewScanner(reader)
-		for scanner.Scan() {
-			pullStatus := make(map[string]interface{})
-			jsonStr := []byte(scanner.Text())
-			// logmsg.Debug("image: jsonStr: %s", jsonStr)
-			err = json.Unmarshal(jsonStr, &pullStatus)
-			if err != nil {
-				logmsg.Error("parsing docker status: %v", err)
-				return "", err
-			}
-			// logmsg.Debug("image: %s", pullStatus)
-			progress := ""
-			if pullStatus["progress"] != nil {
-				progress = pullStatus["progress"].(string)
-			}
-			logmsg.Info("%s: %s", pullStatus["status"], progress)
-		}
-		if err = scanner.Err(); err != nil {
+				// This is currently needed to ensure images are downloaded before we
+				// move on to creating containers...
+				scanner := bufio.NewScanner(reader)
+				for scanner.Scan() {
+					pullStatus := make(map[string]interface{})
+					jsonStr := []byte(scanner.Text())
+					err = json.Unmarshal(jsonStr, &pullStatus)
+					if err != nil {
+						logmsg.Error("parsing docker status: %v", err)
+						return err
+					}
+					// logmsg.Debug("image: %s", pullStatus)
+					// progress := ""
+					if pullStatus["progress"] != nil {
+						progress := pullStatus["progress"].(string)
+						logmsg.Info("%v: %s", pullStatus["status"], progress)
+					} else {
+						logmsg.Warn("image: jsonStr: %s", jsonStr)
+						if pullStatus["errorDetail"] != nil {
+							return fmt.Errorf("%v", pullStatus["errorDetail"])
+						}
+						logmsg.Info("%v", pullStatus["status"])
+					}
+				}
+				if err = scanner.Err(); err != nil {
+					return err
+				}
+				// io.Copy(os.Stdout, reader)
+				return nil
+			},
+		)
+		if err != nil {
+			logmsg.Error("ImagePull imgRef: %s, %v, exceeded retries", imgRef, err)
 			return "", err
 		}
-		// io.Copy(os.Stdout, reader)
 
 	} else {
 		logmsg.Info("Image %s already pulled & image_pull_policy: %s", job.ContainerImage, job.ImagePullPolicy)

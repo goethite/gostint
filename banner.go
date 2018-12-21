@@ -213,7 +213,7 @@ var _escData = map[string]*_escFile{
 		name:    "banner.txt",
 		local:   "banner.txt",
 		size:    378,
-		modtime: 1540652636,
+		modtime: 1542549079,
 		compressed: `
 H4sIAAAAAAAC/3yQT0vEMBDF7/kUc1SQxD8XERHRQy9FvHgLjN12SALbZEmnFSEfXpIUWz1sSPJ4M7+8
 wAg4uxIA4OVm9zh+1jbo4jCtV9FSRNw/uKh5VXRF0vpJWmXDNeJV5VDlpCw659edj/6TnzIixGs4fUdn
