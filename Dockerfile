@@ -25,12 +25,15 @@ WORKDIR /go/src/github.com/gbevan/gostint
 COPY main.go banner.go Gopkg* ./
 COPY v1 ./v1/
 COPY approle ./approle/
-COPY pingclean ./pingclean/
-COPY jobqueues ./jobqueues/
+COPY authenticate ./authenticate/
 COPY apierrors ./apierrors/
-COPY health ./health/
 COPY cleanup ./cleanup/
+COPY health ./health/
+COPY jobqueues ./jobqueues/
 COPY logmsg ./logmsg/
+COPY pingclean ./pingclean/
+COPY state ./state/
+COPY ui ./ui/
 
 RUN \
   go get github.com/golang/dep/cmd/dep && \
