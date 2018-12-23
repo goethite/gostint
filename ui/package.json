@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack --mode development",
-    "godo": "webpack --mode development && cd .. && godo gogenerate && VAULT_EXTERNAL_ADDR=http://127.0.0.1:8300 GOSTINT_DEBUG=1 godo"
+    "build": "webpack --mode production && cd .. && godo gogenerate",
+    "godo": "webpack --mode development && cd .. && godo gogenerate && VAULT_EXTERNAL_ADDR=http://127.0.0.1:8300 GOSTINT_UI=1 GOSTINT_DEBUG=1 godo"
   },
   "keywords": [],
   "author": "",

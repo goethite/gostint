@@ -44,7 +44,7 @@ import (
 )
 
 //go:generate esc -o banner.go banner.txt
-//go:generate esc -prefix "ui" -include "(^ui/index.html|^ui/css|^ui/js|^ui/dist|css/bootstrap.css)" -pkg ui -o ui/ui.go ui
+//go:generate esc -prefix "ui" -include "(^ui/favicon.ico|^ui/index.html|^ui/css|^ui/js|^ui/dist|css/bootstrap.css)" -pkg ui -o ui/ui.go ui
 
 // MongoDB session and db
 var dbSession *mgo.Session

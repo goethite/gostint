@@ -31,7 +31,7 @@ then
 fi
 
 # check clone has same commit point as upstream master
-git fetch upstream master
+git fetch upstream master || exit 2
 
 CLONE_MASTER_COMMIT=$(git show-ref refs/heads/master | awk '{print $1;}')
 UPSTREAM_MASTER_COMMIT=$(git ls-remote upstream master | awk '{print $1;}')
@@ -42,6 +42,9 @@ then
   exit 1
 fi
 
+# go generate || exit 2
+(cd ui && npm build) || exit 2
+
 echo "Logging in to dockerhub"
 docker login || exit 2
 echo "Building goethite/gostint:$TAG image"
@@ -49,11 +52,14 @@ docker build -t goethite/gostint:$TAG . || exit 2
 echo "Pushing goethite/gostint:$TAG to dockerhub"
 docker push goethite/gostint:$TAG || exit 2
 
+docker tag goethite/gostint:$TAG goethite/gostint:latest || exit 2
+docker push goethite/gostint:latest || exit 2
+
 echo "Tagging master as $TAG"
-git tag -a $TAG -m "$COMMENT"
+git tag -a $TAG -m "$COMMENT" || exit 2
 
 echo "Pushing tag $TAG upstream"
-git push upstream $TAG
+git push upstream $TAG || exit 2
 
 echo "Releasing to github..."
-goreleaser --rm-dist
+goreleaser --rm-dist || exit 2
