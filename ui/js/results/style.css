@@ -1,0 +1,26 @@
+
+:local(.container) {
+  border-color: #007bff;
+  border-style: solid;
+  border-width: 3px;
+  border-radius: 10px;
+  margin: 50px;
+  padding: 10px;
+}
+
+:local(.hdr) {
+  text-decoration: underline;
+}
+
+:local(.row) {
+  font-family: monospace;
+}
+
+:local(.row:hover) {
+  color: #007bff;
+  cursor: pointer;
+}
+
+:local(.paginationCenter) {
+  display: inline-block;
+}
