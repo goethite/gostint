@@ -21,6 +21,10 @@ const ansi_up = new AnsiUp();
 import ErrorMsg from '../error_message.js';
 import EnvVars from './env_vars.js';
 import SecretMaps from './secret_maps.js';
+import Results from '../results';
+
+import { gostint } from '../common/gostint_api.js';
+import { vault } from '../common/vault_api.js';
 
 import { parse } from 'shell-quote';
 
@@ -50,12 +54,16 @@ class Action extends Component {
       secretMaps: [],
       envVars: [],
 
-      results: {}
+      results: {},
+
+      refreshResults: true
     };
+
 
     this.advancedSimple = this.advancedSimple.bind(this);
     this.run = this.run.bind(this);
     this.resultsReturn = this.resultsReturn.bind(this);
+    this.viewResult = this.viewResult.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.handleSecretMaps = this.handleSecretMaps.bind(this);
     this.handleEnvVars = this.handleEnvVars.bind(this);
@@ -306,6 +314,12 @@ class Action extends Component {
               <ErrorMsg>{this.state.errorMessage}</ErrorMsg>
             </Container>
           </Form>
+
+          <Results
+            URLs={this.props.URLs}
+            vaultAuth={this.props.vaultAuth}
+            refresh={this.state.refreshResults}
+            resultCb={this.viewResult}/>
         </Collapse>
 
         <Collapse isOpen={this.state.resultsShow}>
@@ -326,7 +340,7 @@ class Action extends Component {
               </tr>
             </thead>
             <tbody>
-              <tr>
+              <tr className={css._id}>
                 <td>{this.state.results.qname}</td>
                 <td>{this.state.results.status}</td>
                 <td>{this.state.results.started}</td>
@@ -360,8 +374,58 @@ class Action extends Component {
     this.setState(() => {
       return {
         actionShow: true,
-        resultsShow: false
+        resultsShow: false,
+        refreshResults: !this.state.refreshResults // refresh results table
       };
+    });
+  }
+
+  viewResult(id) {
+    console.log('viewResult id:', id);
+
+    let apiToken;
+    // Get a minimal token for job query to gostint
+    vault(
+      this.props.URLs.vault,
+      this.props.vaultAuth.token,
+      'v1/auth/token/create',
+      'POST',
+      {
+        policies: ['default'],
+        ttl: '6h',
+        // num_uses: 1,
+        display_name: 'gostint_ui'
+      }
+    )
+    .then((res) => {
+      apiToken = res.auth.client_token;
+
+      return gostint(
+        this.props.URLs.gostint,
+        `v1/api/job/${id}`,
+        'GET',
+        null,
+        {
+          'X-Auth-Token': apiToken,
+          'Content-Type': 'application/json'
+        }
+      )
+    })
+    .then((res) => res.json())
+    .then((res) => {
+      console.log('results res:', res);
+      this.setState(() => {
+        return {
+          errorMessage: '',
+          actionShow: false,
+          resultsShow: true,
+          results: res
+        };
+      })
+      // this.setState({results: res});
+    })
+    .catch((err) => {
+      console.error('results err:', err);
     });
   }
 
@@ -396,21 +460,34 @@ class Action extends Component {
       let cubbyToken;
 
       // Get a minimal token for job submission to gostint
-      this.vault('v1/auth/token/create', 'POST', {
-        policies: ['default'],
-        ttl: '6h',
-        // num_uses: 1,
-        display_name: 'gostint_ui'
-      })
+      vault(
+        this.props.URLs.vault,
+        this.props.vaultAuth.token,
+        'v1/auth/token/create',
+        'POST',
+        {
+          policies: ['default'],
+          ttl: '6h',
+          // num_uses: 1,
+          display_name: 'gostint_ui'
+        }
+      )
       .then((res) => {
         apiToken = res.auth.client_token;
 
         // Get secret id for gostint approle
-        return this.vault(`v1/auth/approle/role/${this.state.gostintRole}/secret-id`, 'POST');
+        return vault(
+          this.props.URLs.vault,
+          this.props.vaultAuth.token,
+          `v1/auth/approle/role/${this.state.gostintRole}/secret-id`,
+          'POST'
+        );
       })
       .then((res) => {
         // Wrap the secret id
-        return this.vault(
+        return vault(
+          this.props.URLs.vault,
+          this.props.vaultAuth.token,
           'v1/sys/wrapping/wrap',
           'POST',
           res.data,
@@ -422,7 +499,9 @@ class Action extends Component {
 
         // Encrypt the job payload
         const jobB64 = Buffer.from(JSON.stringify(job)).toString('base64');
-        return this.vault(
+        return vault(
+          this.props.URLs.vault,
+          this.props.vaultAuth.token,
           `v1/transit/encrypt/${this.state.gostintRole}`,
           'POST',
           {plaintext: jobB64}
@@ -432,18 +511,26 @@ class Action extends Component {
         encryptedJob = res.data.ciphertext;
 
         // get limited use token for cubbyhole
-        return this.vault('v1/auth/token/create', 'POST', {
-          policies: ['default'],
-          ttl: '1h',
-          use_limit: 2,
-          display_name: 'gostint_cubbyhole'
-        });
+        return vault(
+          this.props.URLs.vault,
+          this.props.vaultAuth.token,
+          'v1/auth/token/create',
+          'POST',
+          {
+            policies: ['default'],
+            ttl: '1h',
+            use_limit: 2,
+            display_name: 'gostint_cubbyhole'
+          }
+        );
       })
       .then((res) => {
         cubbyToken = res.auth.client_token;
 
         // Put encrypted job in cubbyhole
-        return this.vault(
+        return vault(
+          this.props.URLs.vault,
+          this.props.vaultAuth.token,
           'v1/cubbyhole/job',
           'POST',
           {payload: encryptedJob},
@@ -460,7 +547,8 @@ class Action extends Component {
         };
 
         // submit job
-        return this.gostint(
+        return gostint(
+          this.props.URLs.gostint,
           'v1/api/job',
           'POST',
           jWrap,
@@ -476,7 +564,8 @@ class Action extends Component {
       .then((data) => {
         (function (self, apiToken, data) {
           const intvl = setInterval(() => {
-            self.gostint(
+            gostint(
+              self.props.URLs.gostint,
               `v1/api/job/${data._id}`,
               'GET',
               null,
@@ -530,38 +619,38 @@ class Action extends Component {
     };
   }
 
-  vault(path, method, data, headers) {
-    headers = headers || {}
-    if (!headers['X-Vault-Token']) {
-      headers['X-Vault-Token'] = this.props.vaultAuth.token;
-    }
+  // vault(path, method, data, headers) {
+  //   headers = headers || {}
+  //   if (!headers['X-Vault-Token']) {
+  //     headers['X-Vault-Token'] = this.props.vaultAuth.token;
+  //   }
+  //
+  //   return fetch(this.props.URLs.vault + '/' + path, {
+  //     headers,
+  //     method: method || 'GET',
+  //     body: data ? JSON.stringify(data) : undefined
+  //   })
+  //   .then((res) => {
+  //     switch(res.status) {
+  //       case 200:
+  //         return res.json();
+  //       case 204:
+  //         return;
+  //       default:
+  //         return Promise.reject(
+  //           new Error(`Request failed with status: ${res.status} ${res.statusText} [${res.url}]`)
+  //         );
+  //     }
+  //   });
+  // }
 
-    return fetch(this.props.URLs.vault + '/' + path, {
-      headers,
-      method: method || 'GET',
-      body: data ? JSON.stringify(data) : undefined
-    })
-    .then((res) => {
-      switch(res.status) {
-        case 200:
-          return res.json();
-        case 204:
-          return;
-        default:
-          return Promise.reject(
-            new Error(`Request failed with status: ${res.status} ${res.statusText} [${res.url}]`)
-          );
-      }
-    });
-  }
-
-  gostint(path, method, data, headers) {
-    return fetch(this.props.URLs.gostint + '/' + path, {
-      headers,
-      method: method || 'GET',
-      body: data ? JSON.stringify(data) : undefined
-    });
-  }
+  // gostint(path, method, data, headers) {
+  //   return fetch(this.props.URLs.gostint + '/' + path, {
+  //     headers,
+  //     method: method || 'GET',
+  //     body: data ? JSON.stringify(data) : undefined
+  //   });
+  // }
 
   advancedSimple() {
     this.setState((state, props) => {

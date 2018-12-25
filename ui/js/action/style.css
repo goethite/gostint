@@ -60,3 +60,7 @@
   padding: 10px;
   white-space: pre;
 }
+
+:local(._id) {
+  font-family: monospace;
+}

@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -73,6 +74,7 @@ func Routes(db *mgo.Database) *chi.Mux {
 	router.Post("/", postJob)
 	router.Post("/kill/{jobID}", killJob)
 	router.Get("/{jobID}", getJob)
+	router.Get("/", listJobs)
 	router.Delete("/{jobID}", deleteJob)
 
 	return router
@@ -93,6 +95,69 @@ type getResponse struct {
 
 // // AuthCtxKey context key for authentication state & policy map
 // type AuthCtxKey string
+
+type listResponse struct {
+	Data  []getResponse `json:"data"`
+	Skip  int           `json:"skip"`
+	Limit int           `json:"limit"`
+	Total int           `json:"total"`
+}
+
+func listJobs(w http.ResponseWriter, req *http.Request) {
+	// Parse URL params
+	err := req.ParseForm()
+	if err != nil {
+		render.Render(w, req, apierrors.ErrInternalError(err))
+		return
+	}
+
+	skip := 0
+	skipParam := req.FormValue("skip") //.(string)
+	if v, err2 := strconv.Atoi(skipParam); err2 == nil {
+		skip = v
+	}
+
+	limit := 10
+	coll := jobRouter.Db.C("queues")
+	count, err := coll.Find(bson.M{}).Count()
+	if err != nil {
+		render.Render(w, req, apierrors.ErrInternalError(err))
+		return
+	}
+
+	var jobs []JobRequest
+	err = coll.Find(bson.M{}).Sort("-submitted").Skip(skip).Limit(limit).All(&jobs)
+	if err != nil {
+		// if err.Error() == notfound {
+		// 	render.Render(w, req, apierrors.ErrNotFound(err))
+		// 	return
+		// }
+		render.Render(w, req, apierrors.ErrInternalError(err))
+		return
+	}
+	resp := []getResponse{}
+	for _, job := range jobs {
+		resp = append(resp, getResponse{
+			ID:             job.ID.Hex(),
+			Status:         job.Status,
+			NodeUUID:       job.NodeUUID,
+			Qname:          job.Qname,
+			ContainerImage: job.ContainerImage,
+			Submitted:      job.Submitted,
+			Started:        job.Started,
+			Ended:          job.Ended,
+			Output:         job.Output,
+			ReturnCode:     job.ReturnCode,
+		})
+	}
+	paginateResp := listResponse{
+		Data:  resp,
+		Skip:  skip,
+		Limit: limit,
+		Total: count,
+	}
+	render.JSON(w, req, paginateResp)
+}
 
 func getJob(w http.ResponseWriter, req *http.Request) {
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
