@@ -381,39 +381,18 @@ class Action extends Component {
   }
 
   viewResult(id) {
-    console.log('viewResult id:', id);
-
-    let apiToken;
-    // Get a minimal token for job query to gostint
-    vault(
-      this.props.URLs.vault,
-      this.props.vaultAuth.token,
-      'v1/auth/token/create',
-      'POST',
+    gostint(
+      this.props.URLs.gostint,
+      `v1/api/job/${id}`,
+      'GET',
+      null,
       {
-        policies: ['default'],
-        ttl: '6h',
-        // num_uses: 1,
-        display_name: 'gostint_ui'
+        'X-Auth-Token': this.props.vaultAuth.gostintToken,
+        'Content-Type': 'application/json'
       }
     )
-    .then((res) => {
-      apiToken = res.auth.client_token;
-
-      return gostint(
-        this.props.URLs.gostint,
-        `v1/api/job/${id}`,
-        'GET',
-        null,
-        {
-          'X-Auth-Token': apiToken,
-          'Content-Type': 'application/json'
-        }
-      )
-    })
     .then((res) => res.json())
     .then((res) => {
-      console.log('results res:', res);
       this.setState(() => {
         return {
           errorMessage: '',
@@ -422,10 +401,10 @@ class Action extends Component {
           results: res
         };
       })
-      // this.setState({results: res});
     })
     .catch((err) => {
       console.error('results err:', err);
+      this.setState({errorMessage: err.message});
     });
   }
 
@@ -454,35 +433,17 @@ class Action extends Component {
     }, () => {
       // see https://github.com/goethite/gostint-client/blob/master/clientapi/clientapi.go
       const job = this.buildJob()
-      let apiToken;
       let wrapSecretID;
       let encryptedJob;
       let cubbyToken;
 
-      // Get a minimal token for job submission to gostint
+      // Get secret id for gostint approle
       vault(
         this.props.URLs.vault,
         this.props.vaultAuth.token,
-        'v1/auth/token/create',
-        'POST',
-        {
-          policies: ['default'],
-          ttl: '6h',
-          // num_uses: 1,
-          display_name: 'gostint_ui'
-        }
+        `v1/auth/approle/role/${this.state.gostintRole}/secret-id`,
+        'POST'
       )
-      .then((res) => {
-        apiToken = res.auth.client_token;
-
-        // Get secret id for gostint approle
-        return vault(
-          this.props.URLs.vault,
-          this.props.vaultAuth.token,
-          `v1/auth/approle/role/${this.state.gostintRole}/secret-id`,
-          'POST'
-        );
-      })
       .then((res) => {
         // Wrap the secret id
         return vault(
@@ -553,7 +514,7 @@ class Action extends Component {
           'POST',
           jWrap,
           {
-            'X-Auth-Token': apiToken,
+            'X-Auth-Token': this.props.vaultAuth.gostintToken,
             'Content-Type': 'application/json'
           }
         );
@@ -562,7 +523,7 @@ class Action extends Component {
         return res.json()
       })
       .then((data) => {
-        (function (self, apiToken, data) {
+        (function (self, data) {
           const intvl = setInterval(() => {
             gostint(
               self.props.URLs.gostint,
@@ -570,7 +531,7 @@ class Action extends Component {
               'GET',
               null,
               {
-                'X-Auth-Token': apiToken,
+                'X-Auth-Token': self.props.vaultAuth.gostintToken,
                 'Content-Type': 'application/json'
               }
             )
@@ -590,10 +551,10 @@ class Action extends Component {
             })
             .catch((err) => {
               console.error('err:', err);
-              this.setState({errorMessage: err.message});
+              self.setState({errorMessage: err.message});
             });
           }, 2000);
-        })(this, apiToken, data);
+        })(this, data);
 
       })
       .catch((err) => {

@@ -5,6 +5,7 @@ import { InputGroup, Input, Button, Form } from 'reactstrap';
 import { withRouter } from 'react-router-dom';
 
 import ErrorMsg from './error_message.js';
+import { vault } from './common/vault_api.js';
 
 export class Login extends Component {
   constructor(props) {
@@ -17,6 +18,7 @@ export class Login extends Component {
       from,
       vaultAuth: props.vaultAuth,
       token: '',
+      gostintToken: '',
       userName: '',
       userPassword: '',
       roleId: '',
@@ -134,21 +136,43 @@ export class Login extends Component {
       })
       .then((res) => {
         if (res.errors) {
-          this.setState(() => ({errorMessage: res.errors.join(', ')}));
-        } else {
-          if (this.state.sessionFn) {
-            this.state.sessionFn({
-              tokenData: this.state.token,
-              // from: this.state.from,
-              originURL: window.location.origin,
-              vaultURL: this.state.vaultAddr
-            });
-          }
-          this.props.history.push("/");
+          // this.setState(() => ({errorMessage: res.errors.join(', ')}));
+          return Promise.reject(new Error(res.errors.join(', ')));
         }
+
+        // Get a minimal token for gostint api, this is so we dont handover
+        // the requestor's actual cred/permissions to gostint (e.g. the ability
+        // to request the approle's secret_id that authorizes gostint to access
+        // secrets in the vault).
+        return vault(
+          this.state.vaultAddr,
+          this.state.token,
+          'v1/auth/token/create',
+          'POST',
+          {
+            policies: ['default'],
+            ttl: '6h',
+            // num_uses: 1,
+            display_name: 'gostint_ui'
+          }
+        )
+      })
+      .then((res) => {
+        this.state.gostintToken = res.auth.client_token;
+
+        if (this.state.sessionFn) {
+          this.state.sessionFn({
+            token: this.state.token,
+            gostintToken: this.state.gostintToken,
+            // from: this.state.from,
+            originURL: window.location.origin,
+            vaultURL: this.state.vaultAddr
+          });
+        }
+        this.props.history.push("/");
       })
       .catch((err) => {
-        console.error('vault lookup self err:', err);
+        console.error('vault token err:', err);
         this.setState(() => ({errorMessage: err.message}));
       });
     } // if token
