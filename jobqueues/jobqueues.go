@@ -640,6 +640,12 @@ func (job *Job) runRequest() {
 	job.SecretFileType = payloadObj.SecretFileType
 	job.ContOnWarnings = payloadObj.ContOnWarnings
 
+	job.UpdateJob(bson.M{
+		"container_image":   job.ContainerImage,
+		"image_pull_policy": job.ImagePullPolicy,
+		"entrypoint":        job.EntryPoint,
+	})
+
 	// get image
 	imgID, err := job.pullDockerImage(ctx, cli)
 	if err != nil {

@@ -332,8 +332,11 @@ class Action extends Component {
           <Table>
             <thead>
               <tr>
+                <th>ID</th>
                 <th>Queue</th>
                 <th>Status</th>
+                <th>Image</th>
+                <th>Submitted</th>
                 <th>Started</th>
                 <th>Ended</th>
                 <th>Return Code</th>
@@ -341,8 +344,11 @@ class Action extends Component {
             </thead>
             <tbody>
               <tr className={css._id}>
+                <td>{this.state.results._id}</td>
                 <td>{this.state.results.qname}</td>
                 <td>{this.state.results.status}</td>
+                <td>{this.state.results.container_image}</td>
+                <td>{this.state.results.submitted}</td>
                 <td>{this.state.results.started}</td>
                 <td>{
                   (this.state.results.status && this.state.results.status.match(/(running|queued)/)) ? '' : this.state.results.ended
