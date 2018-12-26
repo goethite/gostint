@@ -8,8 +8,10 @@ import {
   Table
 } from 'reactstrap';
 
+import { FaTrashAlt } from 'react-icons/fa';
+
+import ErrorMsg from '../error_message.js';
 import { gostint } from '../common/gostint_api.js';
-import { vault } from '../common/vault_api.js';
 
 import css from './style.css';
 
@@ -19,7 +21,8 @@ class Results extends Component {
 
     this.state = {
       skip: 0,
-      results: {}
+      results: {},
+      errorMessage: ''
     }
 
     this.intvl;
@@ -27,10 +30,10 @@ class Results extends Component {
     this.selectResult = this.selectResult.bind(this);
     this.resultsPrevious = this.resultsPrevious.bind(this);
     this.resultsNext = this.resultsNext.bind(this);
+    this.deleteResult = this.deleteResult.bind(this);
   }
 
   componentDidMount() {
-    console.log('in componentDidMount');
     this.refreshResults();
 
     this.intvl = setInterval(() => {
@@ -43,7 +46,6 @@ class Results extends Component {
   }
 
   componentWillReceiveProps(props) {
-    console.log('in componentWillReceiveProps props:', props);
     const { refresh } = this.props;
     if (props.refresh !== refresh) {
       this.refreshResults();
@@ -51,53 +53,38 @@ class Results extends Component {
   }
 
   refreshResults() {
-    let apiToken;
-    // Get a minimal token for job query to gostint
-    vault(
-      this.props.URLs.vault,
-      this.props.vaultAuth.token,
-      'v1/auth/token/create',
-      'POST',
-      {
-        policies: ['default'],
-        ttl: '6h',
-        // num_uses: 1,
-        display_name: 'gostint_ui'
-      }
-    )
-    .then((res) => {
-      apiToken = res.auth.client_token;
-
-      return gostint(
+    this.setState(() => {
+      return {
+        errorMessage: ''
+      };
+    }, () => {
+      gostint(
         this.props.URLs.gostint,
         `v1/api/job?skip=${this.state.skip}`,
         'GET',
         null,
         {
-          'X-Auth-Token': apiToken,
+          'X-Auth-Token': this.props.vaultAuth.gostintToken,
           'Content-Type': 'application/json'
         }
       )
-    })
-    .then((res) => res.json())
-    .then((res) => {
-      console.log('results res:', res);
-      this.setState({results: res});
-    })
-    .catch((err) => {
-      console.error('results err:', err);
+      .then((res) => res.json())
+      .then((res) => {
+        this.setState({results: res});
+      })
+      .catch((err) => {
+        console.error('results err:', err);
+        self.setState({errorMessage: err.message});
+      });
     });
   }
 
   selectResult(e) {
-    console.log('selectResult clicked e:', e);
     const resultId = e.currentTarget.getAttribute('data-item');
-    console.log('resultId:', resultId)
     this.props.resultCb(resultId);
   }
 
   resultsPrevious() {
-    console.log('resultsPrevious');
     this.setState((state) => {
       return {
         skip: state.skip - 10 > 0 ? state.skip - 10 : 0
@@ -108,13 +95,41 @@ class Results extends Component {
   }
 
   resultsNext() {
-    console.log('resultsNext');
     this.setState((state) => {
       return {
         skip: state.skip + 10 < this.state.results.total ? state.skip + 10 : state.skip
       };
     }, () => {
       this.refreshResults();
+    });
+  }
+
+  deleteResult(e) {
+    event.preventDefault();
+
+    const resultId = e.currentTarget.getAttribute('data-item');
+    this.setState(() => {
+      return {
+        errorMessage: ''
+      };
+    }, () => {
+      gostint(
+        this.props.URLs.gostint,
+        `v1/api/job/${resultId}`,
+        'DELETE',
+        null,
+        {
+          'X-Auth-Token': this.props.vaultAuth.gostintToken,
+          'Content-Type': 'application/json'
+        }
+      )
+      .then((res) => {
+        this.refreshResults();
+      })
+      .catch((err) => {
+        console.error('results err:', err);
+        self.setState({errorMessage: err.message});
+      });
     });
   }
 
@@ -134,6 +149,7 @@ class Results extends Component {
               <th>Started</th>
               <th>Ended</th>
               <th>Return Code</th>
+              <th>&nbsp;</th>
             </tr>
           </thead>
           <tbody>
@@ -142,16 +158,25 @@ class Results extends Component {
                 <tr
                   className={css.row}
                   key={i.toString()}
-                  data-item={r._id}
-                  onClick={this.selectResult}>
-                  <td>{r._id}</td>
-                  <td>{r.qname}</td>
-                  <td>{r.status}</td>
-                  <td>{r.container_image}</td>
-                  <td>{r.submitted}</td>
-                  <td>{r.started}</td>
-                  <td>{r.ended}</td>
-                  <td>{r.return_code}</td>
+                >
+                  <td
+                    onClick={this.selectResult}
+                    data-item={r._id}
+                    className={css._id}
+                  >{r._id}</td>
+                  <td className={css.cell}>{r.qname}</td>
+                  <td className={css.cell}>{r.status}</td>
+                  <td className={css.cell}>{r.container_image}</td>
+                  <td className={css.cell}>{r.submitted}</td>
+                  <td className={css.cell}>{r.started}</td>
+                  <td className={css.cell}>{r.ended}</td>
+                  <td className={css.cell}>{r.return_code}</td>
+                  <td>
+                    <Button color="danger"
+                      className={css.deleteButton}
+                      data-item={r._id}
+                      onClick={this.deleteResult}><FaTrashAlt /></Button>
+                  </td>
                 </tr>
               );
             })}
@@ -177,6 +202,7 @@ class Results extends Component {
             </PaginationItem>
           </Pagination>
         </div>
+        <ErrorMsg>{this.state.errorMessage}</ErrorMsg>
       </div>
     );
   }

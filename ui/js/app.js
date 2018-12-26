@@ -16,10 +16,6 @@ import ErrorMsg from './error_message.js';
 class App extends Component {
   constructor(props) {
     super(props);
-
-    this.state = {
-      token: (this.props ? this.props.vaultAuth.token : null)
-    };
   }
 
   render() {

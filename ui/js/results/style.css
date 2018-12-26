@@ -16,11 +16,23 @@
   font-family: monospace;
 }
 
-:local(.row:hover) {
+:local(._id) {
+  vertical-align: middle !important;
+}
+
+:local(._id:hover) {
   color: #007bff;
   cursor: pointer;
 }
 
 :local(.paginationCenter) {
   display: inline-block;
+}
+
+:local(.deleteButton) {
+  margin-top: -2px;
+}
+
+:local(.cell) {
+  vertical-align: middle !important;
 }

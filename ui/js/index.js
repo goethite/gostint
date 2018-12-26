@@ -12,7 +12,8 @@ import App from './app.js';
 import Login from './login.js';
 
 const vaultAuth = {
-  token: null
+  token: null,        // requestor's vault token
+  gostintToken: null  // minimal token for gotstint api access
 }
 
 const URLs = {
@@ -51,7 +52,8 @@ render(
 );
 
 function handleLogin(data) {
-  vaultAuth.token = data.tokenData;
+  vaultAuth.token = data.token;
+  vaultAuth.gostintToken = data.gostintToken;
   URLs.gostint = data.originURL;
   URLs.vault = data.vaultURL;
 }
