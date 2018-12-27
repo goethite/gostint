@@ -3,6 +3,11 @@
   margin-bottom: 20px;
 }
 
+:local(.clearButton) {
+  margin-bottom: 20px;
+  margin-left: 20px;
+}
+
 :local(.form) {
   border-color: #007bff;
   border-style: solid;

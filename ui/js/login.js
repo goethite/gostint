@@ -57,7 +57,7 @@ export class Login extends Component {
   render() {
     return (
       <div>
-        <h1 className="siteHeader">gostint</h1>
+        <h1 className="siteHeader">GoStint</h1>
         <Form className="loginContainer" onSubmit={this.login}>
           <h4 className="loginHdr">Login</h4>
 
@@ -152,6 +152,7 @@ export class Login extends Component {
           {
             policies: ['default'],
             ttl: '6h',
+            // ttl: '30s',
             // num_uses: 1,
             display_name: 'gostint_ui'
           }

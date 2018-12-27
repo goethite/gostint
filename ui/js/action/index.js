@@ -58,8 +58,9 @@ class Action extends Component {
 
       refreshResults: true
     };
+    Object.assign(this.state, this.emptyForm());
 
-
+    this.clearForm = this.clearForm.bind(this);
     this.advancedSimple = this.advancedSimple.bind(this);
     this.run = this.run.bind(this);
     this.resultsReturn = this.resultsReturn.bind(this);
@@ -67,6 +68,32 @@ class Action extends Component {
     this.handleChange = this.handleChange.bind(this);
     this.handleSecretMaps = this.handleSecretMaps.bind(this);
     this.handleEnvVars = this.handleEnvVars.bind(this);
+  }
+
+  emptyForm() {
+    return {
+      errorMessage: '',
+      contentErrorMessage: '',
+
+      dockerImage: '',
+      run: '',
+      imagePullPolicy: 'IfNotPresent',
+      gostintRole: 'gostint-role',
+      qName: '',
+      content: '',
+      entryPoint: '',
+      workingDir: '',
+      secretFileType: 'yaml',
+      contOnWarnings: false,
+      secretMaps: [],
+      envVars: [],
+
+      results: {}
+    }
+  }
+
+  clearForm() {
+    this.setState(this.emptyForm());
   }
 
   handleChange(event) {
@@ -129,7 +156,14 @@ class Action extends Component {
               <Button
                 color="secondary"
                 className={css.advButton}
+                title="Toggle advanced/simple view"
                 onClick={this.advancedSimple}>{this.state.advancedForm ? 'Simple' : 'Advanced'}</Button>
+              <Button
+                color="warning"
+                className={css.clearButton}
+                title="Clear form"
+                onClick={this.clearForm}
+                type="reset">Clear</Button>
               <br/>
               <Row>
                 <Col md="3">
@@ -309,7 +343,11 @@ class Action extends Component {
               </Collapse>
 
               <br/>
-              <Button color="primary" className={css.runButton} type="submit">Run</Button>
+              <Button
+                color="primary"
+                className={css.runButton}
+                title="Run the containerised job"
+                type="submit">Run</Button>
               <br/>
               <ErrorMsg>{this.state.errorMessage}</ErrorMsg>
             </Container>
@@ -327,7 +365,8 @@ class Action extends Component {
           <Button
             color="primary"
             className={css.returnButton}
-            onClick={this.resultsReturn}>&lt;&lt; Return</Button>
+            title="Go back"
+            onClick={this.resultsReturn}>&lt;&lt;&lt;</Button>
           <br/>
           <Table>
             <thead>
