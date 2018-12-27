@@ -70,11 +70,17 @@ class Results extends Component {
       )
       .then((res) => res.json())
       .then((res) => {
+        if (res.error) {
+          if (res.error.match(/Code: 403/)) {
+            return window.location.reload(); // Logout
+          }
+          return Promise.reject(new Error(res.error));
+        }
         this.setState({results: res});
       })
       .catch((err) => {
         console.error('results err:', err);
-        self.setState({errorMessage: err.message});
+        this.setState({errorMessage: err.message});
       });
     });
   }
@@ -163,6 +169,7 @@ class Results extends Component {
                     onClick={this.selectResult}
                     data-item={r._id}
                     className={css._id}
+                    title="View this job"
                   >{r._id}</td>
                   <td className={css.cell}>{r.qname}</td>
                   <td className={css.cell}>{r.status}</td>
@@ -175,6 +182,7 @@ class Results extends Component {
                     <Button color="danger"
                       className={css.deleteButton}
                       data-item={r._id}
+                      title="Delete this job"
                       onClick={this.deleteResult}><FaTrashAlt /></Button>
                   </td>
                 </tr>
