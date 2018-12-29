@@ -23,7 +23,7 @@ const URLs = {
 
 const node = document.getElementById('gostint');
 render(
-  <Router>
+  <Router basename={window.pathname}>
     <div>
       <Route
         path="/login"
