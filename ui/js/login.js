@@ -168,7 +168,8 @@ export class Login extends Component {
             token: this.state.token,
             gostintToken: this.state.gostintToken,
             // from: this.state.from,
-            originURL: window.location.origin,
+            // originURL: window.location.origin,
+            originURL: `${window.location.origin}${rootPath}`,
             vaultURL: this.state.vaultAddr
           });
         }
