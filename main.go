@@ -124,6 +124,8 @@ func Routes() *chi.Mux {
 	})
 
 	router.Get("/login", func(w http.ResponseWriter, r *http.Request) {
+		logmsg.Info("/login URL: %v", r.URL)
+		logmsg.Info("/login RequestURI: %v", r.RequestURI)
 		http.Redirect(w, r, "../", 301)
 	})
 
