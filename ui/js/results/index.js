@@ -68,7 +68,6 @@ class Results extends Component {
           'Content-Type': 'application/json'
         }
       )
-      .then((res) => res.json())
       .then((res) => {
         if (res.error) {
           if (res.error.match(/Code: 403/)) {

@@ -436,7 +436,6 @@ class Action extends Component {
         'Content-Type': 'application/json'
       }
     )
-    .then((res) => res.json())
     .then((res) => {
       this.setState(() => {
         return {
@@ -564,9 +563,6 @@ class Action extends Component {
           }
         );
       })
-      .then((res) => {
-        return res.json()
-      })
       .then((data) => {
         (function (self, data) {
           const intvl = setInterval(() => {
@@ -580,9 +576,6 @@ class Action extends Component {
                 'Content-Type': 'application/json'
               }
             )
-            .then((queueRes) => {
-              return queueRes.json();
-            })
             .then((queue) => {
               self.setState(() => {
                 return {
