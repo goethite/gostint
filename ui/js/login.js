@@ -7,6 +7,8 @@ import { withRouter } from 'react-router-dom';
 import ErrorMsg from './error_message.js';
 import { vault } from './common/vault_api.js';
 
+const rootPath = window.location.pathname === '/' ? '' : window.location.pathname;
+
 export class Login extends Component {
   constructor(props) {
     super(props);
@@ -31,7 +33,7 @@ export class Login extends Component {
     this.handleChange = this.handleChange.bind(this);
 
     // get the vault url from gostint
-    fetch(window.location.origin + '/v1/api/vault/info')
+    fetch(`${window.location.origin}${rootPath}/v1/api/vault/info`)
     .then((res) => {
       if (res.status !== 200) {
         return Promise.reject(

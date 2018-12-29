@@ -20,10 +20,11 @@ const URLs = {
   gostint: '',
   vault: ''
 }
+const rootPath = window.location.pathname;
 
 const node = document.getElementById('gostint');
 render(
-  <Router basename={window.location.pathname}>
+  <Router basename={rootPath}>
     <div>
       <Route
         path="/login"
