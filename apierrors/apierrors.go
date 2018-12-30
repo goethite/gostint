@@ -79,3 +79,12 @@ func ErrInvalidJobRequest(err error) render.Renderer {
 		ErrorText:      err.Error(),
 	}
 }
+
+func ErrPermissionDenied(err error) render.Renderer {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: 403,
+		StatusText:     "Permission Denied.",
+		ErrorText:      err.Error(),
+	}
+}
