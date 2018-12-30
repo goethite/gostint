@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gbevan/gostint/apierrors"
 	"github.com/gbevan/gostint/logmsg"
@@ -79,7 +80,11 @@ func Authenticate(next http.Handler) http.Handler {
 		tokDetails, err := client.Logical().Read("auth/token/lookup-self")
 		if err != nil {
 			logmsg.Error("Authentication Failure with Token: %v", err)
-			render.Render(w, r, apierrors.ErrInvalidRequest(err))
+			if strings.Contains(err.Error(), "Code: 403") {
+				render.Render(w, r, apierrors.ErrPermissionDenied(err))
+			} else {
+				render.Render(w, r, apierrors.ErrInvalidRequest(err))
+			}
 			return
 		}
 		// tokJson, _ := json.Marshal(tokDetails)

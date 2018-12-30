@@ -70,15 +70,15 @@ class Results extends Component {
       )
       .then((res) => {
         if (res.error) {
-          if (res.error.match(/Code: 403/)) {
-            return window.location.reload(); // Logout
-          }
           return Promise.reject(new Error(res.error));
         }
         this.setState({results: res});
       })
       .catch((err) => {
         console.error('results err:', err);
+        if (err.message.match(/status: 403/i)) {
+          return window.location.reload(); // Logout
+        }
         this.setState({errorMessage: err.message});
       });
     });
