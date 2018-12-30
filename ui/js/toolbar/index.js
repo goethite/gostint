@@ -9,6 +9,8 @@ import {
   NavLink
 } from 'reactstrap';
 
+const rootPath = window.location.pathname === '/' ? '' : window.location.pathname;
+
 class ToolBar extends Component {
   constructor() {
     super();
@@ -24,7 +26,7 @@ class ToolBar extends Component {
           <NavbarBrand>GoStint</NavbarBrand>
           <Nav className="ml-auto" navbar>
             <NavItem>
-              <NavLink href="/">Logout</NavLink>
+              <NavLink href={rootPath}>Logout</NavLink>
             </NavItem>
           </Nav>
         </Navbar>
