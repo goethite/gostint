@@ -29,3 +29,5 @@ docs:
         url: "/docs/1100_api_v1_job/"
       - title: API v1/api/health
         url: "/docs/1110_api_v1_health/"
+      - title: API v1/api/vault
+        url: "/docs/1120_api_v1_vault/"

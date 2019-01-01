@@ -76,7 +76,7 @@ container is instantiated and placed in the container either as `/secrets.yml` o
 
 ### A Helm Chart for Kubernetes
 A demonstrator [Helm Chart](https://github.com/goethite/gostint-helm)
-is available to deploy GoStint, Vault with etcd
+is available to deploy GoStint, Vault with Consul
 backend, and MongoDB - as a self-contained automation API.
 
 Note: The gostint pods are run in "privileged" mode to enable
