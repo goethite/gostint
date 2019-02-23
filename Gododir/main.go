@@ -47,7 +47,7 @@ func tasks(p *do.Project) {
 	})
 
 	p.Task("default", do.S{"gettoken"}, func(c *do.Context) {
-		c.Start(`GOSTINT_SSL_CERT=etc/cert.pem GOSTINT_SSL_KEY=etc/key.pem GOSTINT_DBAUTH_TOKEN={{.token}} GOSTINT_DBURL=127.0.0.1:27017 main.go`, do.M{"token": token})
+		c.Start(`GOSTINT_SSL_CERT=etc/cert.pem GOSTINT_SSL_KEY=etc/key.pem GOSTINT_DBAUTH_TOKEN={{.token}} GOSTINT_DBURL=127.0.0.1:27017 GOSTINT_UI=1 VAULT_EXTERNAL_ADDR=http://127.0.0.1:8300 main.go`, do.M{"token": token})
 	}).Src("**/*.go")
 
 	// To be run alongside default to drive BATS tests against the instance
