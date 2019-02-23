@@ -107,5 +107,5 @@ echo '=== Allow CORS for UI Development ========================'
 curl -s \
   --request PUT \
   --header 'X-Vault-Token: root' \
-  --data '{"allowed_origins": "https://127.0.0.1:3232"}' \
+  --data '{"allowed_origins": ["https://127.0.0.1:3232", "http://127.0.0.1:8300"]}' \
   ${VAULT_ADDR}/v1/sys/config/cors
