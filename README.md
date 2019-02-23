@@ -192,6 +192,11 @@ To run the BATS test suite (in another terminal session):
 ...
 ```
 
+### Build the UI and run godo
+```bash
+~/go/src/github.com/gbevan/gostint/ui$ npm run godo
+```
+
 ## LICENSE - GPLv3
 
 ```
