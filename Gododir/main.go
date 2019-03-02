@@ -22,6 +22,8 @@ func tasks(p *do.Project) {
       vault kv put kv/my-secret my-value=s3cr3t
       vault kv put kv/my-form field1=value1 field2=value2 field3=value3 \
         KUBECONFIG_BASE64=$(echo '{"desc": "kubectl config content goes here"}' | base64 -w 0)
+
+      vault kv put secret/ansible/groups/all ansible_user=vagrant ansible_password=vagrant
     `)
 	})
 
