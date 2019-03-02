@@ -17,8 +17,10 @@ echo '=== Starting vault =================================='
     -dev-listen-address="0.0.0.0:8200" \
     >vault.log 2>&1 &
 )
-echo -e 'export VAULT_ADDR=http://127.0.0.1:8200' >> .bashrc
-export VAULT_ADDR=http://127.0.0.1:8200
+# echo -e 'export VAULT_ADDR=http://127.0.0.1:8200' >> .bashrc
+# export VAULT_ADDR=http://127.0.0.1:8200
+echo -e 'export VAULT_ADDR=http://172.18.0.1:8200' >> .bashrc
+export VAULT_ADDR=http://172.18.0.1:8200
 
 # Login to vault and configure
 echo '=== Logging in to vault =================================='

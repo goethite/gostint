@@ -1,0 +1,14 @@
+{
+  "qname": "another_q",
+  "container_image": "goethite/gostint-ansible:2.7.5",
+  "run": [
+    "-i",
+    "172.18.0.1,",
+    "dump.yml", "-vvv"
+  ],
+  "env_vars": [
+    "HASHIVAULT_VARS_DEBUG=1",
+    "VAULT_SKIP_VERIFY=1",
+    "ANSIBLE_SSH_ARGS='-o StrictHostKeyChecking=no'"
+  ]
+}
