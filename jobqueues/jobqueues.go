@@ -30,6 +30,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -636,7 +637,11 @@ func (job *Job) runRequest() {
 	job.EntryPoint = payloadObj.EntryPoint
 	job.Run = payloadObj.Run
 	job.WorkingDir = payloadObj.WorkingDir
-	job.EnvVars = payloadObj.EnvVars
+	job.EnvVars = append(
+		payloadObj.EnvVars,
+		"VAULT_ADDR="+os.Getenv("VAULT_ADDR"),
+		"VAULT_TOKEN="+token,
+	)
 	job.SecretFileType = payloadObj.SecretFileType
 	job.ContOnWarnings = payloadObj.ContOnWarnings
 
