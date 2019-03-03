@@ -7,8 +7,6 @@
     "dump.yml", "-vvv"
   ],
   "env_vars": [
-    "HASHIVAULT_VARS_DEBUG=1",
-    "VAULT_SKIP_VERIFY=1",
-    "ANSIBLE_SSH_ARGS='-o StrictHostKeyChecking=no'"
+    "HASHIVAULT_VARS_DEBUG=1"
   ]
 }

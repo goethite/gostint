@@ -38,6 +38,7 @@ import (
 	"github.com/avast/retry-go"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/gbevan/gostint/approle"
 	"github.com/gbevan/gostint/cleanup"
@@ -471,8 +472,24 @@ func (job *Job) createDockerContainer(ctx *context.Context, cli *client.Client, 
 		cfg.WorkingDir = job.WorkingDir
 	}
 
+	hostCfg := container.HostConfig{}
+	// Map VAULT_CACERT file into container as readonly
+	vaultCaCert := os.Getenv("VAULT_CACERT")
+	logmsg.Debug("vaultCaCert:", vaultCaCert)
+	if vaultCaCert != "" {
+		hostCfg.Mounts = []mount.Mount{
+			{
+				Type:     mount.TypeBind,
+				Source:   vaultCaCert,
+				Target:   vaultCaCert,
+				ReadOnly: true,
+			},
+		}
+	}
+	logmsg.Debug("hostCfg:", hostCfg)
+
 	var resp container.ContainerCreateCreatedBody
-	resp, err := cli.ContainerCreate(*ctx, &cfg, nil, nil, "")
+	resp, err := cli.ContainerCreate(*ctx, &cfg, &hostCfg, nil, "")
 	if err != nil {
 		logmsg.Error("ContainerCreate cfg: %v", cfg)
 		logmsg.Error("err: %v", err)
@@ -640,6 +657,7 @@ func (job *Job) runRequest() {
 	job.EnvVars = append(
 		payloadObj.EnvVars,
 		"VAULT_ADDR="+os.Getenv("VAULT_ADDR"),
+		"VAULT_CACERT="+os.Getenv("VAULT_CACERT"),
 		"VAULT_TOKEN="+token,
 	)
 	job.SecretFileType = payloadObj.SecretFileType
