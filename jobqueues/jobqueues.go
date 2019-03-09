@@ -149,6 +149,12 @@ func GetDockerInfo() (string, *types.Info, error) {
 	if err != nil {
 		return "", nil, err
 	}
+	defer func() {
+		cliErr := vcli.Close()
+		if cliErr != nil {
+			logmsg.Error("Error: GetDockerInfo() failed: %s\n", cliErr)
+		}
+	}()
 	vInfo, err := vcli.Info(*vctx)
 	if err != nil {
 		return vcli.ClientVersion(), nil, err
@@ -557,6 +563,12 @@ func (job *Job) runRequest() {
 		job.jobFailed("failed", err)
 		return
 	}
+	defer func() {
+		cliErr := cli.Close()
+		if cliErr != nil {
+			logmsg.Error("Error:runRequest() docker client close failed: %s\n", cliErr)
+		}
+	}()
 
 	token, vclient, err := approle.Authenticate(jobQueues.AppRole.ID, job.WrapSecretID)
 	if err != nil {
