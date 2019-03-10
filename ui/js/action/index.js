@@ -56,8 +56,9 @@ class Action extends Component {
 
       results: {},
 
-      refreshResults: true
+      refreshResults: true,
     };
+    this.intvl = null
     Object.assign(this.state, this.emptyForm());
 
     this.clearForm = this.clearForm.bind(this);
@@ -416,6 +417,7 @@ class Action extends Component {
   }
 
   resultsReturn() {
+    clearInterval(this.intvl);
     this.setState(() => {
       return {
         actionShow: true,
@@ -426,30 +428,15 @@ class Action extends Component {
   }
 
   viewResult(id) {
-    gostint(
-      this.props.URLs.gostint,
-      `v1/api/job/${id}`,
-      'GET',
-      null,
-      {
-        'X-Auth-Token': this.props.vaultAuth.gostintToken,
-        'Content-Type': 'application/json'
-      }
-    )
-    .then((res) => {
-      this.setState(() => {
-        return {
-          errorMessage: '',
-          actionShow: false,
-          resultsShow: true,
-          results: res
-        };
-      })
+    this.setState(() => {
+      this.trackResultByID(id);
+      return {
+        errorMessage: '',
+        actionShow: false,
+        resultsShow: true,
+        results: {}
+      };
     })
-    .catch((err) => {
-      console.error('results err:', err);
-      this.setState({errorMessage: err.message});
-    });
   }
 
   getBase64(file) {
@@ -564,41 +551,54 @@ class Action extends Component {
         );
       })
       .then((data) => {
-        (function (self, data) {
-          const intvl = setInterval(() => {
-            gostint(
-              self.props.URLs.gostint,
-              `v1/api/job/${data._id}`,
-              'GET',
-              null,
-              {
-                'X-Auth-Token': self.props.vaultAuth.gostintToken,
-                'Content-Type': 'application/json'
-              }
-            )
-            .then((queue) => {
-              self.setState(() => {
-                return {
-                  results: queue
-                };
-              });
-
-              if (queue.status !== 'queued' && queue.status !== 'running' ) {
-                clearInterval(intvl);
-              }
-            })
-            .catch((err) => {
-              console.error('err:', err);
-              self.setState({errorMessage: err.message});
-            });
-          }, 2000);
-        })(this, data);
-
+        this.trackResultByID(data._id);
       })
       .catch((err) => {
         console.error('err:', err);
         this.setState({errorMessage: err.message});
       })
+    });
+  }
+
+  trackResultByID(id) {
+    const self = this;
+
+    this.getResultByID(id);
+
+    if (self.intvl) {
+      clearInterval(self.intvl);
+    }
+    self.intvl = setInterval(() => {
+      this.getResultByID(id);
+    }, 2000);
+  }
+
+  getResultByID(id) {
+    const self = this;
+    return gostint(
+      self.props.URLs.gostint,
+      `v1/api/job/${id}`,
+      'GET',
+      null,
+      {
+        'X-Auth-Token': self.props.vaultAuth.gostintToken,
+        'Content-Type': 'application/json'
+      }
+    )
+    .then((queue) => {
+      self.setState(() => {
+        return {
+          results: queue
+        };
+      });
+
+      if (queue.status !== 'queued' && queue.status !== 'running' ) {
+        clearInterval(self.intvl);
+      }
+    })
+    .catch((err) => {
+      console.error('err:', err);
+      self.setState({errorMessage: err.message});
     });
   }
 
