@@ -90,7 +90,9 @@ type getResponse struct {
 	Started        time.Time `json:"started"`
 	Ended          time.Time `json:"ended"`
 	Output         string    `json:"output"`
+	Stderr         string    `json:"stderr"`
 	ReturnCode     int       `json:"return_code"`
+	Tty            bool      `json:"tty"`
 }
 
 // // AuthCtxKey context key for authentication state & policy map
@@ -147,7 +149,9 @@ func listJobs(w http.ResponseWriter, req *http.Request) {
 			Started:        job.Started,
 			Ended:          job.Ended,
 			Output:         job.Output,
+			Stderr:         job.Stderr,
 			ReturnCode:     job.ReturnCode,
+			Tty:            job.Tty,
 		})
 	}
 	paginateResp := listResponse{
@@ -180,6 +184,7 @@ func getJob(w http.ResponseWriter, req *http.Request) {
 		render.Render(w, req, apierrors.ErrInternalError(err))
 		return
 	}
+	logmsg.Warn("Tty:", job.Tty)
 	render.JSON(w, req, getResponse{
 		ID:             job.ID.Hex(),
 		Status:         job.Status,
@@ -190,7 +195,9 @@ func getJob(w http.ResponseWriter, req *http.Request) {
 		Started:        job.Started,
 		Ended:          job.Ended,
 		Output:         job.Output,
+		Stderr:         job.Stderr,
 		ReturnCode:     job.ReturnCode,
+		Tty:            job.Tty,
 	})
 }
 
@@ -269,23 +276,26 @@ func postJob(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// get encrypted payload from cubbyhole
-	client, err := api.NewClient(&api.Config{
-		Address: os.Getenv("VAULT_ADDR"),
-	})
-	if err != nil {
-		render.Render(w, req, apierrors.ErrInternalError(fmt.Errorf("Failed create vault client api: %s", err)))
-		return
+	// Allow bypassing of cubbyhole, assuming unbroken TLS used for the request
+	if job.CubbyToken != "" && job.CubbyPath != "" {
+		// get encrypted payload from cubbyhole
+		client, err := api.NewClient(&api.Config{
+			Address: os.Getenv("VAULT_ADDR"),
+		})
+		if err != nil {
+			render.Render(w, req, apierrors.ErrInternalError(fmt.Errorf("Failed create vault client api: %s", err)))
+			return
+		}
+		client.SetToken(job.CubbyToken)
+		resp, err := client.Logical().Read(job.CubbyPath)
+		if err != nil {
+			render.Render(w, req, apierrors.ErrInternalError(fmt.Errorf("POSSIBLE SECURITY/INTERCEPTION ALERT!!! Failed to read cubbyhole from vault, error: %s", err)))
+			return
+		}
+		job.Payload = resp.Data["payload"].(string)
 	}
-	client.SetToken(job.CubbyToken)
-	resp, err := client.Logical().Read(job.CubbyPath)
-	if err != nil {
-		render.Render(w, req, apierrors.ErrInternalError(fmt.Errorf("POSSIBLE SECURITY/INTERCEPTION ALERT!!! Failed to read cubbyhole from vault, error: %s", err)))
-		return
-	}
-	job.Payload = resp.Data["payload"].(string)
 
-	err = coll.Insert(jobRequest)
+	err := coll.Insert(jobRequest)
 	if err != nil {
 		panic(err)
 	}

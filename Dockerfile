@@ -10,7 +10,7 @@
 #     -e GOSTINT_DBAUTH_TOKEN="$token" \
 #     -e GOSTINT_ROLEID="$roleid" \
 #     -e GOSTINT_ROLENAME="gostint-role" \
-#     -e GOSTINT_DBURL="dbhost:27017"
+#     -e GOSTINT_DBURL="dbhost:27017" \
 #     gostint
 #
 # cert.pem and key.pm are needed in /srv/gostint/lib, these can be redirected to

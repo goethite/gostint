@@ -6,6 +6,9 @@ Authenticated and end-to-end encrypted with Hashicorp Vault with Secret Injectio
 > gostint:
 > : _stint - an allotted amount or piece of work_
 
+| ![](https://img.shields.io/github/release/goethite/gostint.svg) | ![](https://img.shields.io/github/license/goethite/gostint.svg) |
+|-|-|
+
 Goal is to be a Highly Available and Scaleable Secure API for automation.
 
 See [Concept Ideas](docs/Concept_Ideas.md)

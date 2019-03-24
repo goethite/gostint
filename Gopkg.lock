@@ -70,7 +70,8 @@
     "api/types/time",
     "api/types/versions",
     "api/types/volume",
-    "client"
+    "client",
+    "pkg/stdcopy"
   ]
   revision = "320063a2ad06a1d8ada61c94c29dbe44e2d87473"
   source = "https://github.com/docker/engine.git"
@@ -388,6 +389,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4c53b678c5ab180e5c2b6525851945030e1f397d4eac1c4742501e6ee657deca"
+  inputs-digest = "d6c938bbf7292a5f4aa6ac70300466ce1f2913d48d890afb73975e1a3364b153"
   solver-name = "gps-cdcl"
   solver-version = 1
