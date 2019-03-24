@@ -212,13 +212,13 @@ var _escData = map[string]*_escFile{
 	"/banner.txt": {
 		name:    "banner.txt",
 		local:   "banner.txt",
-		size:    378,
-		modtime: 1542549079,
+		size:    383,
+		modtime: 1553434922,
 		compressed: `
-H4sIAAAAAAAC/3yQT0vEMBDF7/kUc1SQxD8XERHRQy9FvHgLjN12SALbZEmnFSEfXpIUWz1sSPJ4M7+8
-wAg4uxIA4OVm9zh+1jbo4jCtV9FSRNw/uKh5VXRF0vpJWmXDNeJV5VDlpCw659edj/6TnzIixGs4fUdn
-LMPt9c09NLGz3QgtEbzQ0nl4NKUiD9k9ez5+hXgcZB/Gp/+zaF1PfqIBZj9QBLYEzdsHNO/tcieEZT5N
-D0qZQGwdkzSO7XyQLigTJnae1cbUVh/GX1z8BAAA//+ocHoSegEAAA==
+H4sIAAAAAAAC/3yQQUvEMBCF7/kVc1TQZHe9qIiIHnop4sVbYOy2QxLYJks6uyLkx0uSYqsHQ5LHm/ny
+AiPg35UAAC8Xu8bxo7ZBF4dpvoqWIuL6wUXNq6IrkuZP0iwLrhGvKocqJ2XROb/ufPSv/JQRIV7C8Ss6
+Yxl2m+3t9W6zvYMmdrYboSWCZzp3Hh5Mqch9dk+eD58hHgbZh/Hx70Ba15OfaICTHygCW4Lm9R2at/Z8
+I4RlPk73SplAbB2TNI7taS9dUCZM7DyrhamtPow/uPgOAAD//+sTQUV/AQAA
 `,
 	},
 }

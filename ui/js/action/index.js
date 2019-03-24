@@ -51,6 +51,7 @@ class Action extends Component {
       workingDir: '',
       secretFileType: 'yaml',
       contOnWarnings: false,
+      tty: true,
       secretMaps: [],
       envVars: [],
 
@@ -86,6 +87,7 @@ class Action extends Component {
       workingDir: '',
       secretFileType: 'yaml',
       contOnWarnings: false,
+      tty: true,
       secretMaps: [],
       envVars: [],
 
@@ -104,6 +106,12 @@ class Action extends Component {
         case 'contOnWarnings':
           this.setState((state) => {
             return {'contOnWarnings': !state.contOnWarnings};
+          });
+          break;
+
+        case 'tty':
+          this.setState((state) => {
+            return {'tty': !state.tty};
           });
           break;
 
@@ -336,6 +344,25 @@ class Action extends Component {
                     Continue to run job even if vault reported warnings when looking up secret refs.
                     </FormText>
                   </Col>
+
+                  <Col>
+                    <FormGroup check inline>
+                      <Label check>
+                        <Input
+                          type="checkbox"
+                          name="tty"
+                          id="tty"
+                          onChange={this.handleChange}
+                          checked={this.state.tty}
+                          value="toggle"
+                        />
+                        Enable TTY
+                      </Label>
+                    </FormGroup>
+                    <FormText>
+                    Run container with tty terminal option enabled.
+                    </FormText>
+                  </Col>
                 </Row>
 
                 <SecretMaps secretMaps={this.state.secretMaps} onChange={this.handleSecretMaps} />
@@ -376,6 +403,7 @@ class Action extends Component {
                 <th>Queue</th>
                 <th>Status</th>
                 <th>Image</th>
+                <th>Tty?</th>
                 <th>Submitted</th>
                 <th>Started</th>
                 <th>Ended</th>
@@ -388,6 +416,7 @@ class Action extends Component {
                 <td>{this.state.results.qname}</td>
                 <td>{this.state.results.status}</td>
                 <td>{this.state.results.container_image}</td>
+                <td>{this.state.results.tty ? 'yes' : 'no'}</td>
                 <td>{this.state.results.submitted}</td>
                 <td>{this.state.results.started}</td>
                 <td>{
@@ -408,6 +437,17 @@ class Action extends Component {
             }}></pre>
           :
             <h3 className={css.outputElips}>...</h3>
+          }
+          {this.state.results.stderr ?
+            <div>
+              <h3 className={css.outputHdr}>Stderr:</h3>
+              <pre className={css.output}
+                dangerouslySetInnerHTML={{
+                __html: ansi_up.ansi_to_html(this.state.results.stderr)
+              }}></pre>
+            </div>
+          :
+            <h3 className={css.outputElips}></h3>
           }
           <ErrorMsg>{this.state.errorMessage}</ErrorMsg>
 
@@ -586,6 +626,7 @@ class Action extends Component {
       }
     )
     .then((queue) => {
+      console.log('queue:', queue);
       self.setState(() => {
         return {
           results: queue
@@ -614,7 +655,8 @@ class Action extends Component {
       env_vars:           this.state.envVars.map(er => `${er.key}=${er.val}`),
       secret_refs:        this.state.secretMaps.map(sr => `${sr.key}@${sr.val}`),
       secret_file_type:   this.state.secretFileType,
-      cont_on_warnings:   this.state.contOnWarnings
+      cont_on_warnings:   this.state.contOnWarnings,
+      tty:                this.state.tty
     };
   }
 

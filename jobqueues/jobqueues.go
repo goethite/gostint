@@ -40,6 +40,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/gbevan/gostint/approle"
 	"github.com/gbevan/gostint/cleanup"
 	"github.com/gbevan/gostint/logmsg"
@@ -93,6 +94,7 @@ type Job struct {
 	Run             []string `json:"run"               bson:"run"`
 	WorkingDir      string   `json:"working_directory" bson:"working_directory"`
 	EnvVars         []string `json:"env_vars"          bson:"env_vars"`
+	Tty             bool     `json:"tty"               bson:"tty"`
 	SecretRefs      []string `json:"secret_refs"       bson:"secret_refs"`
 	SecretFileType  string   `json:"secret_file_type"  bson:"secret_file_type"`
 	ContOnWarnings  bool     `json:"cont_on_warnings"  bson:"cont_on_warnings"`
@@ -104,6 +106,7 @@ type Job struct {
 	Started       time.Time `json:"started"           bson:"started,omitempty"`
 	Ended         time.Time `json:"ended"             bson:"ended,omitempty"`
 	Output        string    `json:"output"            bson:"output"`
+	Stderr        string    `json:"stderr"            bson:"stderr"`
 	ContainerID   string    `json:"container_id"      bson:"container_id"`
 	KillRequested bool      `json:"kill_requested"    bson:"kill_requested"`
 
@@ -342,7 +345,7 @@ func (job *Job) resolveContentMeta() (*Meta, error) {
 			}
 		} // for
 
-		job.ContainerImage = meta.ContainerImage
+		// job.ContainerImage = meta.ContainerImage
 	}
 	return &meta, nil
 }
@@ -419,7 +422,7 @@ func (job *Job) pullDockerImage(ctx *context.Context, cli *client.Client) (strin
 						progress := pullStatus["progress"].(string)
 						logmsg.Info("%v: %s", pullStatus["status"], progress)
 					} else {
-						logmsg.Warn("image: jsonStr: %s", jsonStr)
+						// logmsg.Warn("image: jsonStr: %s", jsonStr)
 						if pullStatus["errorDetail"] != nil {
 							return fmt.Errorf("%v", pullStatus["errorDetail"])
 						}
@@ -465,7 +468,7 @@ func (job *Job) createDockerContainer(ctx *context.Context, cli *client.Client, 
 	cfg := container.Config{
 		Image: job.ContainerImage,
 		Cmd:   job.Run,
-		Tty:   true,
+		Tty:   job.Tty,
 		User:  fmt.Sprintf("%d:%d", gostintUID, gostintGID),
 		Env:   job.EnvVars,
 	}
@@ -548,6 +551,33 @@ func (job *Job) metaFromDockerContainer(ctx *context.Context, cli *client.Client
 	return meta, nil
 }
 
+func resolveFirstStr(list []string) string {
+	for _, element := range list {
+		if element != "" {
+			return element
+		}
+	}
+	return ""
+}
+
+func resolveFirstArray(list [][]string) []string {
+	for _, element := range list {
+		if len(element) != 0 {
+			return element
+		}
+	}
+	return []string{}
+}
+
+func resolveFirstBoolTrue(list []bool) bool {
+	for _, element := range list {
+		if element {
+			return element
+		}
+	}
+	return false
+}
+
 func (job *Job) runRequest() {
 	if job.KillRequested {
 		job.UpdateJob(bson.M{
@@ -591,51 +621,57 @@ func (job *Job) runRequest() {
 		}
 	}()
 
-	// Decrypt the payload and merge into jobRequest
-	resp, err := vclient.Logical().Write(
-		fmt.Sprintf("transit/decrypt/%s", jobQueues.AppRole.Name),
-		map[string]interface{}{
-			"ciphertext": job.Payload,
-		},
-	)
-	if err != nil {
-		job.UpdateJob(bson.M{
-			"status": "failed",
-			"ended":  time.Now(),
-			"output": fmt.Sprintf("Failed to decrypt payload via vault: %s", err.Error()),
-		})
-		return
-	}
-	payloadJSON, err2 := base64.StdEncoding.DecodeString(resp.Data["plaintext"].(string))
-	if err2 != nil {
-		job.UpdateJob(bson.M{
-			"status": "failed",
-			"ended":  time.Now(),
-			"output": fmt.Sprintf("Failed to decode payload content base64: %s", err2),
-		})
-		return
-	}
 	var payloadObj Job
-	err = json.Unmarshal(payloadJSON, &payloadObj)
-	if err != nil {
-		job.UpdateJob(bson.M{
-			"status": "failed",
-			"ended":  time.Now(),
-			"output": fmt.Sprintf("Failed unmarshaling json from payload: %s", err),
-		})
-		return
-	}
+	if job.Payload != "" {
+		// Decrypt the payload and merge into jobRequest
+		resp, err := vclient.Logical().Write(
+			fmt.Sprintf("transit/decrypt/%s", jobQueues.AppRole.Name),
+			map[string]interface{}{
+				"ciphertext": job.Payload,
+			},
+		)
 
-	// sanity check
-	if payloadObj.Qname != job.Qname {
-		job.UpdateJob(bson.M{
-			"status": "failed",
-			"ended":  time.Now(),
-			"output": fmt.Sprintf("payload qname and job request qname do not match: '%s' != '%s'", payloadObj.Qname, job.Qname),
-		})
-		return
-	}
-	// Cleanup job of resolved items
+		if err != nil {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("Failed to decrypt payload via vault: %s", err.Error()),
+			})
+			return
+		}
+
+		payloadJSON, err2 := base64.StdEncoding.DecodeString(resp.Data["plaintext"].(string))
+		if err2 != nil {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("Failed to decode payload content base64: %s", err2),
+			})
+			return
+		}
+
+		err = json.Unmarshal(payloadJSON, &payloadObj)
+		if err != nil {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("Failed unmarshaling json from payload: %s", err),
+			})
+			return
+		}
+
+		// sanity check
+		if payloadObj.Qname != job.Qname {
+			job.UpdateJob(bson.M{
+				"status": "failed",
+				"ended":  time.Now(),
+				"output": fmt.Sprintf("payload qname and job request qname do not match: '%s' != '%s'", payloadObj.Qname, job.Qname),
+			})
+			return
+		}
+	} // if Payload
+
+	// Cleanup job of any resolved items
 	job.CubbyToken = ""
 	job.CubbyPath = ""
 	job.WrapSecretID = ""
@@ -649,7 +685,10 @@ func (job *Job) runRequest() {
 	 */
 
 	// Get Content to resolve gostint.yml meta data
-	job.Content = payloadObj.Content
+	job.Content = resolveFirstStr([]string{payloadObj.Content, job.Content})
+	// if payloadObj.Content != "" {
+	// 	job.Content = payloadObj.Content
+	// }
 	contentMeta, err := job.resolveContentMeta()
 	if err != nil {
 		job.jobFailed("failed", err)
@@ -657,28 +696,33 @@ func (job *Job) runRequest() {
 	}
 
 	// resolve image
-	job.ContainerImage = contentMeta.ContainerImage
-	if payloadObj.ContainerImage != "" {
-		job.ContainerImage = payloadObj.ContainerImage
-	}
-	job.ImagePullPolicy = payloadObj.ImagePullPolicy
+	job.ContainerImage = resolveFirstStr([]string{payloadObj.ContainerImage, job.ContainerImage, contentMeta.ContainerImage})
+	// if payloadObj.ContainerImage != "" {
+	// 	job.ContainerImage = payloadObj.ContainerImage
+	// }
+	job.ImagePullPolicy = resolveFirstStr([]string{payloadObj.ImagePullPolicy, job.ImagePullPolicy})
+	// if payloadObj.ImagePullPolicy != "" {
+	// 	job.ImagePullPolicy = payloadObj.ImagePullPolicy
+	// }
 
-	job.EntryPoint = payloadObj.EntryPoint
-	job.Run = payloadObj.Run
-	job.WorkingDir = payloadObj.WorkingDir
+	job.EntryPoint = resolveFirstArray([][]string{payloadObj.EntryPoint, job.EntryPoint})
+	job.Run = resolveFirstArray([][]string{payloadObj.Run, job.Run})
+	job.WorkingDir = resolveFirstStr([]string{payloadObj.WorkingDir, job.WorkingDir})
 	job.EnvVars = append(
 		payloadObj.EnvVars,
 		"VAULT_ADDR="+os.Getenv("VAULT_ADDR"),
 		"VAULT_CACERT="+os.Getenv("VAULT_CACERT"),
 		"VAULT_TOKEN="+token,
 	)
-	job.SecretFileType = payloadObj.SecretFileType
-	job.ContOnWarnings = payloadObj.ContOnWarnings
+	job.SecretFileType = resolveFirstStr([]string{payloadObj.SecretFileType, job.SecretFileType})
+	job.ContOnWarnings = resolveFirstBoolTrue([]bool{payloadObj.ContOnWarnings, job.ContOnWarnings})
+	job.Tty = resolveFirstBoolTrue([]bool{payloadObj.Tty, job.Tty})
 
 	job.UpdateJob(bson.M{
 		"container_image":   job.ContainerImage,
 		"image_pull_policy": job.ImagePullPolicy,
 		"entrypoint":        job.EntryPoint,
+		"tty":               job.Tty,
 	})
 
 	// get image
@@ -979,23 +1023,37 @@ func (job *Job) runContainer(ctx *context.Context, cli *client.Client, container
 		logmsg.Error("status from container wait: %d", status)
 	}
 
-	out, err := cli.ContainerLogs(*ctx, containerID, types.ContainerLogsOptions{ShowStdout: true})
+	out, err := cli.ContainerLogs(*ctx, containerID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
 	if err != nil {
 		return err
 	}
 
-	var buf bytes.Buffer
-	io.Copy(&buf, out)
+	var buf, buferr bytes.Buffer
+	if job.Tty {
+		io.Copy(&buf, out)
+	} else {
+		// then we need to demux the stdout/stderr from the output reader
+		// var (
+		// 	stdoutWtr, stderrWtr bytes.Buffer
+		// )
+		_, err2 := stdcopy.StdCopy(&buf, &buferr, out)
+		if err2 != nil {
+			return err
+		}
+	}
 
 	finalStatus := "success"
 	if status != 0 {
 		finalStatus = "failed"
 	}
+	logmsg.Warn("output:%v", buf.String())
+	logmsg.Warn("stderr:%v", buferr.String())
 
 	job.UpdateJob(bson.M{
 		"status":      finalStatus,
 		"ended":       time.Now(),
 		"output":      buf.String(),
+		"stderr":      buferr.String(),
 		"return_code": status,
 	})
 

@@ -72,6 +72,7 @@ class Results extends Component {
         if (res.error) {
           return Promise.reject(new Error(res.error));
         }
+        console.log('res:', res);
         this.setState({results: res});
       })
       .catch((err) => {
@@ -150,6 +151,7 @@ class Results extends Component {
               <th>Queue</th>
               <th>Status</th>
               <th>Image</th>
+              <th>Tty?</th>
               <th>Submitted</th>
               <th>Started</th>
               <th>Ended</th>
@@ -173,6 +175,7 @@ class Results extends Component {
                   <td className={css.cell}>{r.qname}</td>
                   <td className={css.cell}>{r.status}</td>
                   <td className={css.cell}>{r.container_image}</td>
+                  <td className={css.cell}>{r.tty ? 'yes' : 'no'}</td>
                   <td className={css.cell}>{r.submitted}</td>
                   <td className={css.cell}>{r.started}</td>
                   <td className={css.cell}>{r.ended}</td>
