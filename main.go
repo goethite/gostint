@@ -191,9 +191,6 @@ func main() {
 
 	// Create RESTful routes
 	router := Routes()
-	// http.Handle("/", router)
-	//
-	// http.Handle("/metrics")
 
 	// initialise state
 	state.Init(nodeUUID)
@@ -209,7 +206,6 @@ func main() {
 		fmt.Sprintf(":%d", serverPort),
 		os.Getenv("GOSTINT_SSL_CERT"),
 		os.Getenv("GOSTINT_SSL_KEY"),
-		// nil,
 		router,
 	))
 }
