@@ -41,6 +41,8 @@ import (
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
 	"github.com/hashicorp/vault/api"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 //go:generate esc -o banner.go banner.txt
@@ -121,6 +123,9 @@ func Routes() *chi.Mux {
 		r.Mount("/api/job", job.Routes(GetDb()))
 		r.Mount("/api/health", healthApi.Routes(GetDb()))
 		r.Mount("/api/vault", vault.Routes())
+
+		// prometheus metrics exposition
+		r.Mount("/api/metrics", promhttp.Handler())
 	})
 
 	router.Get("/login", func(w http.ResponseWriter, r *http.Request) {

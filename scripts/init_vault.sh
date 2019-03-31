@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
-VAULTVER=0.11.3
+# VAULTVER=0.11.3
+VAULTVER=1.1.0
 
 GOSTINT_ROLENAME="gostint-role"
 

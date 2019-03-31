@@ -83,7 +83,7 @@ docker run --init -d \
 
 ### Going HA and Scalable with gostint
 See [gostint-helm](https://github.com/goethite/gostint-helm) for (a work-in-progress)
-PoC HA deployment of gostint using mongodb, etcd and vault on kubernetes.
+PoC HA deployment of gostint using mongodb, consul and vault on kubernetes.
 
 ### gostint-client
 A sister project called [gostint-client](https://github.com/goethite/gostint-client)
