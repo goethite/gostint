@@ -35,7 +35,17 @@ type HealthRouter struct { // nolint
 	Db *mgo.Database
 }
 
-var healthRouter HealthRouter
+var (
+	healthRouter HealthRouter
+	// stateMutex sync.Mutex
+
+	// healthDuration = promauto.NewHistogram(
+	// 	prometheus.HistogramOpts{
+	// 		Name: "gostint_health_request_duration_seconds",
+	// 		Help: "gostint histogram of health api request times in seconds.",
+	// 	},
+	// )
+)
 
 // Routes Route handler for health
 func Routes(db *mgo.Database) *chi.Mux {
@@ -48,6 +58,9 @@ func Routes(db *mgo.Database) *chi.Mux {
 }
 
 func getHealth(w http.ResponseWriter, req *http.Request) {
+	// timer := prometheus.NewTimer(healthDuration)
+	// defer timer.ObserveDuration()
+
 	req.ParseForm()
 
 	h, err := health.GetHealth()

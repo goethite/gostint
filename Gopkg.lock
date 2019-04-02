@@ -328,6 +328,7 @@
   packages = [
     "prometheus",
     "prometheus/internal",
+    "prometheus/promauto",
     "prometheus/promhttp"
   ]
   revision = "505eaef017263e299324067d40ca2c48f6a2cf50"
@@ -439,6 +440,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5c88496650e2be1ea4119ce6978d0d87ceb9b7e6df38a57ab42b99a4b3a827aa"
+  inputs-digest = "cbfed6205eac140c14459e6a2e6940b066d54594714e2f96dcdd6c36cd352a20"
   solver-name = "gps-cdcl"
   solver-version = 1

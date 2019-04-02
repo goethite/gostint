@@ -30,6 +30,7 @@ import (
 	"github.com/gbevan/gostint/health"
 	"github.com/gbevan/gostint/jobqueues"
 	"github.com/gbevan/gostint/logmsg"
+	"github.com/gbevan/gostint/metrics"
 	"github.com/gbevan/gostint/pingclean"
 	"github.com/gbevan/gostint/state"
 	"github.com/gbevan/gostint/ui"
@@ -111,6 +112,7 @@ func getDbCreds() (string, string, error) {
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(
+		metrics.NewMetrics("gostint"),
 		render.SetContentType(render.ContentTypeJSON),
 		middleware.Logger,
 		middleware.DefaultCompress,
