@@ -46,7 +46,19 @@ type JobRouter struct { // nolint
 	Db *mgo.Database
 }
 
-var jobRouter JobRouter
+var (
+	jobRouter JobRouter
+
+	// jobDuration = promauto.NewHistogramVec(
+	// 	prometheus.HistogramOpts{
+	// 		Name: "gostint_job_request_duration_seconds",
+	// 		Help: "gostint histogram of job api request times in seconds.",
+	// 	},
+	// 	[]string{
+	// 		"path",
+	// 	},
+	// )
+)
 
 // JobRequest localises jobqueues.Job in this module
 type JobRequest jobqueues.Job // nolint
@@ -106,6 +118,8 @@ type listResponse struct {
 }
 
 func listJobs(w http.ResponseWriter, req *http.Request) {
+	// timer := prometheus.NewTimer(jobDuration.WithLabelValues("listJobs"))
+	// defer timer.ObserveDuration()
 	// Parse URL params
 	err := req.ParseForm()
 	if err != nil {
@@ -164,6 +178,9 @@ func listJobs(w http.ResponseWriter, req *http.Request) {
 }
 
 func getJob(w http.ResponseWriter, req *http.Request) {
+	// timer := prometheus.NewTimer(jobDuration.WithLabelValues("getJob"))
+	// defer timer.ObserveDuration()
+
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
 	if jobID == "" {
 		render.Render(w, req, apierrors.ErrInvalidJobRequest(errors.New("job ID missing from GET path")))
@@ -206,6 +223,9 @@ type deleteResponse struct {
 }
 
 func deleteJob(w http.ResponseWriter, req *http.Request) {
+	// timer := prometheus.NewTimer(jobDuration.WithLabelValues("deleteJob"))
+	// defer timer.ObserveDuration()
+
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
 	if jobID == "" {
 		render.Render(w, req, apierrors.ErrInvalidJobRequest(errors.New("job ID missing from GET path")))
@@ -259,6 +279,9 @@ type postResponse struct {
 // curl http://127.0.0.1:3232/v1/api/job -X POST -d '{"qname":"play", "jobtype": "ansible", "content": "base64 here", "run": "hello.yml"}'
 // -> {"qname":"play","jobtype":"ansible","content":"base64 here","run":"hello.yml"}
 func postJob(w http.ResponseWriter, req *http.Request) {
+	// timer := prometheus.NewTimer(jobDuration.WithLabelValues("postJob"))
+	// defer timer.ObserveDuration()
+
 	data := &JobRequest{}
 	if err := render.Bind(req, data); err != nil {
 		render.Render(w, req, apierrors.ErrInvalidJobRequest(err))
@@ -315,6 +338,9 @@ type killResponse struct {
 }
 
 func killJob(w http.ResponseWriter, req *http.Request) {
+	// timer := prometheus.NewTimer(jobDuration.WithLabelValues("killJob"))
+	// defer timer.ObserveDuration()
+
 	jobID := strings.TrimSpace(chi.URLParam(req, "jobID"))
 	logmsg.Warn("killJob ID: %s", jobID)
 	if jobID == "" {
