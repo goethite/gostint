@@ -29,6 +29,7 @@ COPY authenticate ./authenticate/
 COPY apierrors ./apierrors/
 COPY cleanup ./cleanup/
 COPY health ./health/
+COPY metrics ./metrics/
 COPY jobqueues ./jobqueues/
 COPY logmsg ./logmsg/
 COPY pingclean ./pingclean/
