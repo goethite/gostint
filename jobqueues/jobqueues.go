@@ -1046,8 +1046,8 @@ func (job *Job) runContainer(ctx *context.Context, cli *client.Client, container
 	if status != 0 {
 		finalStatus = "failed"
 	}
-	logmsg.Warn("output:%v", buf.String())
-	logmsg.Warn("stderr:%v", buferr.String())
+	// logmsg.Warn("output:%v", buf.String())
+	// logmsg.Warn("stderr:%v", buferr.String())
 
 	job.UpdateJob(bson.M{
 		"status":      finalStatus,
