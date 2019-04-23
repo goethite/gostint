@@ -57,13 +57,11 @@ func Routes(db *mgo.Database) *chi.Mux {
 	return router
 }
 
+// To retrieve this Gostint instance's health
 func getHealth(w http.ResponseWriter, req *http.Request) {
-	// timer := prometheus.NewTimer(healthDuration)
-	// defer timer.ObserveDuration()
-
 	req.ParseForm()
 
-	h, err := health.GetHealth()
+	h, err := health.GetHealthV1()
 	if err != nil {
 		render.Render(w, req, apierrors.ErrInternalError(err))
 		return

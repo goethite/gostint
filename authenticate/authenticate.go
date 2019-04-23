@@ -46,7 +46,7 @@ type AuthStruct struct {
 // AuthCtxKey context key for authentication state & policy map
 type AuthCtxKey string
 
-// Authenticate caller
+// Authenticate caller's token with vault
 func Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Allow heath data without authenticating

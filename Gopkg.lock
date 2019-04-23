@@ -134,8 +134,8 @@
     ".",
     "middleware"
   ]
-  revision = "b5294d10673813fac8558e7f47242bc9e61b4c25"
-  version = "v3.3.3"
+  revision = "da24bba8dcd4021cafac38724bf10dccc97c3e36"
+  version = "v4.0.2"
 
 [[projects]]
   name = "github.com/go-chi/render"
@@ -440,6 +440,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "cbfed6205eac140c14459e6a2e6940b066d54594714e2f96dcdd6c36cd352a20"
+  inputs-digest = "f44b49f624a0784c7cfb73429b2b0d40a19b26be5f9be8f7d1150d3c0dd08ff8"
   solver-name = "gps-cdcl"
   solver-version = 1

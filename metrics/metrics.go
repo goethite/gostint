@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
+// Prometheus api metrics collector
 // inspried by https://github.com/766b/chi-prometheus
 
 const (
@@ -35,6 +36,7 @@ func NewMetrics(name string) func(next http.Handler) http.Handler {
 			"path",
 		},
 	)
+
 	return m.handler
 }
 

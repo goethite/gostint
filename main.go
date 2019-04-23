@@ -111,6 +111,7 @@ func getDbCreds() (string, string, error) {
 // Routes defines RESTful api middleware and routes.
 func Routes() *chi.Mux {
 	router := chi.NewRouter()
+
 	router.Use(
 		metrics.NewMetrics("gostint"),
 		render.SetContentType(render.ContentTypeJSON),
@@ -130,6 +131,7 @@ func Routes() *chi.Mux {
 		r.Mount("/api/metrics", promhttp.Handler())
 	})
 
+	// Allow optional UI user to login
 	router.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 		logmsg.Info("/login URL: %v", r.URL)
 		logmsg.Info("/login RequestURI: %v", r.RequestURI)
