@@ -1,31 +1,49 @@
 #!/usr/bin/env bats
 
-@test "Submitting job1 busybox without cubbyhole should return json" {
+@test "Simple api - Submitting job1 busybox should return json" {
   # Get a default token for the api post authentication
-  TOKEN=$(vault write -f auth/token/create policies=default -format=json | jq .auth.client_token -r)
+  TOKEN=$(
+    vault write -f \
+      auth/token/create \
+      policies=default \
+      -format=json \
+      | jq .auth.client_token -r
+  )
+  # TOKEN=$(vault write -f auth/token/create policies=gostint-client -format=json | jq .auth.client_token -r)
   echo "TOKEN: $TOKEN" >&2
   echo "$TOKEN" > $BATS_TMPDIR/token
 
   # Get secretId for the approle
-  WRAPSECRETID=$(vault write -wrap-ttl=144h -f auth/approle/role/$GOSTINT_ROLENAME/secret-id -format=json | jq .wrap_info.token -r)
+  WRAPSECRETID=$(
+    vault write -wrap-ttl=144h \
+      -f auth/approle/role/$GOSTINT_ROLENAME/secret-id \
+      -format=json \
+      | jq .wrap_info.token -r
+  )
   echo "WRAPSECRETID: $WRAPSECRETID" >&2
+  # echo "$WRAPSECRETID" > $BATS_TMPDIR/wrapsecretid
 
-  QNAME=$(cat ../job1.json | jq .qname -r)
-
-  # Create new job request with the wrapped secret id
+  # Create new job request with payload
   jq --arg wrap_secret_id "$WRAPSECRETID" \
-    '. | .wrap_secret_id=$wrap_secret_id' \
-    < ../job1.json >$BATS_TMPDIR/job_ncby.json
-  cat $BATS_TMPDIR/job_ncby.json >&2
+     '. | .wrap_secret_id=$wrap_secret_id' \
+     < ../job1.json >$BATS_TMPDIR/job.json
+  cat $BATS_TMPDIR/job.json >&2
 
-  J="$(curl -k -s https://127.0.0.1:3232/v1/api/job --header "X-Auth-Token: $TOKEN" -X POST -d @$BATS_TMPDIR/job_ncby.json | tee $BATS_TMPDIR/job1_ncby.json)"
+  J="$(
+    curl -k -s https://127.0.0.1:3232/v1/api/job \
+      --header "X-Auth-Token: $TOKEN" \
+      -X POST \
+      -d @$BATS_TMPDIR/job.json \
+      | tee $BATS_TMPDIR/job1.json
+  )"
   echo "J: $J" >&2
   [ "$J" != "" ]
+  # /bin/false
 }
 
 @test "job1 should be queued in the play job1 queue" {
 
-  J="$(cat $BATS_TMPDIR/job1_ncby.json)"
+  J="$(cat $BATS_TMPDIR/job1.json)"
   echo "J: $J" >&2
 
   id=$(echo $J | jq ._id -r)
@@ -38,7 +56,7 @@
 @test "Be able to retrieve the current status" {
   TOKEN="$(cat $BATS_TMPDIR/token)"
   echo "TOKEN: $TOKEN" >&2
-  J="$(cat $BATS_TMPDIR/job1_ncby.json)"
+  J="$(cat $BATS_TMPDIR/job1.json)"
 
   ID=$(echo $J | jq ._id -r)
 
@@ -52,7 +70,7 @@
 @test "Status should eventually be success" {
   TOKEN="$(cat $BATS_TMPDIR/token)"
   echo "TOKEN: $TOKEN" >&2
-  J="$(cat $BATS_TMPDIR/job1_ncby.json)"
+  J="$(cat $BATS_TMPDIR/job1.json)"
 
   ID=$(echo $J | jq ._id -r)
   echo "ID:$ID" >&2
@@ -70,12 +88,12 @@
     fi
   done
   echo "status after:$status" >&2
-  echo "$R" > $BATS_TMPDIR/job1_ncby.final.json
+  echo "$R" > $BATS_TMPDIR/job1.final.json
   [ "$status" == "success" ]
 }
 
 @test "Should have final output in json" {
-  R="$(cat $BATS_TMPDIR/job1_ncby.final.json)"
+  R="$(cat $BATS_TMPDIR/job1.final.json)"
 
   echo "R:$R" >&2
   output="$(echo $R | jq .output -r)"
@@ -86,7 +104,7 @@
 @test "Should delete the job id" {
   TOKEN="$(cat $BATS_TMPDIR/token)"
   echo "TOKEN: $TOKEN" >&2
-  J="$(cat $BATS_TMPDIR/job1_ncby.json)"
+  J="$(cat $BATS_TMPDIR/job1.json)"
 
   ID=$(echo $J | jq ._id -r)
   echo "ID:$ID" >&2
@@ -102,7 +120,7 @@
 @test "Lookup for deleted id should return Not Found error" {
   TOKEN="$(cat $BATS_TMPDIR/token)"
   echo "TOKEN: $TOKEN" >&2
-  J="$(cat $BATS_TMPDIR/job1_ncby.json)"
+  J="$(cat $BATS_TMPDIR/job1.json)"
 
   ID=$(echo $J | jq ._id -r)
   echo "ID:$ID" >&2
@@ -116,7 +134,7 @@
 @test "Lookup for garbage id should return Invalid job ID error" {
   TOKEN="$(cat $BATS_TMPDIR/token)"
   echo "TOKEN: $TOKEN" >&2
-  J="$(cat $BATS_TMPDIR/job1_ncby.json)"
+  J="$(cat $BATS_TMPDIR/job1.json)"
 
   R="$(curl -k -s https://127.0.0.1:3232/v1/api/job/DOESNOTEXIST --header "X-Auth-Token: $TOKEN")"
   echo "R:$R" >&2

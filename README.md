@@ -1,6 +1,7 @@
 # gostint - A Shallow RESTful api for Ansible, Terraform ...
 ... and basically anything you would like to run as jobs in docker containers.
-Authenticated and end-to-end encrypted with Hashicorp Vault with Secret Injection
+Authenticated and (optionally) end-to-end encrypted with Hashicorp Vault with
+Secret Injection
 * https://goethite.github.io/gostint/
 
 > gostint:
@@ -28,8 +29,12 @@ JSON jobs used in these tests are in the respective [tests](tests/) files.
 * [Brainstorming job sequence diagrams](docs/jobsequence.md)
 
 ## Features
-* Integrated with Hashicorp Vault's AppRole Authentication, Transit end-to-end
-  encryption, Cubbyhole, Token Wrapping and KV Secrets.
+* Integrated with Hashicorp Vault's AppRole Authentication.
+* Optionally consume Hashicorp Vault's Transit end-to-end
+  encryption, Cubbyhole and Token Wrapping if routing requests through
+  untrusted networks (e.g. where TLS end-to-end encryption is not available).
+* If TLS encryption is unbroken a much simpler way to consume the API is
+  available.
 * Secrets in Vault can be referenced in a job request, which are then injected
   into the job's running container.
 * Additional content can be flexibly injected into the job container from the

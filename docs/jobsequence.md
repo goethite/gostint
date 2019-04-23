@@ -1,4 +1,6 @@
-# Job Sequence Diagrams Brainstorming the Protocol Using Hashicorp Vault
+# Job Sequence Diagrams Brainstorming ...
+... the Protocol for Traversing Untrusted Networks with Broken TLS Encryption Using Hashicorp Vault.  Note that a simpler way of submitting jobs to gostint can be used if
+you have unbroken TLS (either direct or via SNI Routing).
 
 ![First thoughts on job submission protocol](job_diag1.mermaid.png)
 * Requestor and poster here are the same enitity.
@@ -86,7 +88,7 @@ poster / routing.
 ![job via intermediary](job_via_intermediary.mermaid.png)
 ---
 
-Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
+Copyright 2018-2019 Graham Lee Bevan <graham.bevan@ntlworld.com>
 
 <a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="Creative Commons Licence" style="border-width:0" src="https://i.creativecommons.org/l/by/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>.
 
