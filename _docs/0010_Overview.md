@@ -21,7 +21,17 @@ utilising vault features:
 Leveraging the Vault Secret Engines, GoStint can inject secrets into the container
 for the job.
 
-Submitting a job to GoStint involves:
+Submitting a job to GoStint can take two forms:
+
+Firstly, if there is unbroken TLS encryption between the requestor and gostint
+1. Authenticating with the Vault (using either a Vault Token or AppRole),
+2. Getting a Response Wrapped AppRole Secret_Id for the GoStint service.
+3. Submitting a job request.
+4. Polling the status of the job until complete.
+
+and secondly, in the case of the requests traversing an "untrusted" network /
+routing topology, where TLS encryption is broken, we can put an encrypted job
+request payload in a Vault cubbyhole with a wrapped token to accept it:
 
 1. Authenticating with the Vault (using either a Vault Token or AppRole),
 2. Getting a Response Wrapped AppRole Secret_Id for the GoStint service.
@@ -96,5 +106,7 @@ This is now fully implemented between
 [gostint-client](https://github.com/goethite/gostint-client)
 and
 [gostint](https://github.com/goethite/gostint)
+Note: this is only required if traversing "untrusted networks / routing" where
+TLS encryption is being terminated on route.
 
 ![jobsequence](https://raw.githubusercontent.com/goethite/gostint/master/docs/job_via_intermediary.mermaid.png)
