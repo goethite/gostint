@@ -1,5 +1,5 @@
 ---
-title: API v1/api/vault/info
+title: v1/api/vault/info
 classes: wide
 #toc: true
 ---

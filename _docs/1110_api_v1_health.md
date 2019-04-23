@@ -1,5 +1,5 @@
 ---
-title: API v1/api/health
+title: v1/api/health
 classes: wide
 #toc: true
 ---

@@ -1,5 +1,5 @@
 ---
-title: API v1/api/job
+title: v1/api/job
 classes: wide
 #toc: true
 ---
@@ -16,23 +16,26 @@ Paramters that can be specified in a POSTed job request:
 | Parameter | |
 |-----------|-|
 | qname     | Name of the serialization queue to submit to |
-| cubby_token | One-time token from Vault to retrieve a payload its cubbyhole |
-| cubby_path | Path, in Vault, to the cubbyhole on the above token |
+| cubby_token (optional) | One-time token from Vault to retrieve a payload its cubbyhole |
+| cubby_path (optional) | Path, in Vault, to the cubbyhole on the above token |
 | wrap_secret_id | Wrapping Token for the GoStint's AppRole SecretID, from Vault.  This allows GoStint to complete its authentication to the Vault |
 
-The job payload encrypted and placed in the cubbyhole can contain:
+The job payload can either be encrypted and placed in a Vault cubbyhole
+(see `cubby_*` fields above) or can be simply specified in the POSTed JSON,
+containing:
 
 | Parameter | |
 |-----------|-|
 | container_image | Image name in DockerHub to run |
-| image_pull_policy | Always / IfNotPresent |
-| content | base64 encoded tar.gz of injectable content, to overlay on the container prior to execution |
+| image_pull_policy (optional) | Always / IfNotPresent |
+| content (optional) | base64 encoded tar.gz of injectable content, to overlay on the container prior to execution |
 | entrypoint | Array of strings defining the entrypoint in the container, see `docker run`|
 | run | Array of strings defining the command to run, see `docker run`|
 | working_directory | Working directory for the command to run in |
 | env_vars | Environment variables passed to the job container |
+| tty | Boolean default=false, specifies if docker will run the job in a tty (thus preserving any ANSI key codes, e.g. color text, etc.) |
 | secret_refs | Array of strings `variable_name@vault_path` to retrieve from the Vault and inject into the container as /secrets.yml \| .json |
-| secret_file_type | String 'yaml' or 'json' |
+| secret_file_type | What type of secrets file will be injected into the docker container's root filesystem: `yaml` (default) or `json`. |
 | cont_on_warnings | Boolean default false. Whether to panic or continue on secret resolving warnings from the Vault |
 
 These are the additional fields returned:
@@ -44,6 +47,7 @@ These are the additional fields returned:
 | submitted | When submitted |
 | started |  When started |
 | ended | When ended |
-| output | Raw output from the job (stdout+stderr) |
+| output | Raw stdout from the job (stdout+stderr with ansi key codes if tty enabled) |
+| stderr | Raw stderr from the job |
 | container_id | docker container id |
 | kill_requested | Boolean kill has been requested |
