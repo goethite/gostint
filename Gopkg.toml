@@ -24,9 +24,9 @@
 #   go-tests = true
 #   unused-packages = true
 
-[[override]]
-  name = "github.com/go-chi/chi"
-  version = "3.3.2"
+# [[override]]
+#   name = "github.com/go-chi/chi"
+#   version = "3.3.2"
 
 [prune]
   go-tests = true

@@ -47,6 +47,7 @@ func Routes() *chi.Mux {
 	return router
 }
 
+// Retrieve Gotstint's Vault info
 func getVault(w http.ResponseWriter, req *http.Request) {
 	m := make(map[string]string)
 	m["vault_addr"] = vaultAddr

@@ -117,6 +117,7 @@ type listResponse struct {
 	Total int           `json:"total"`
 }
 
+// Retrieve a list of jobs
 func listJobs(w http.ResponseWriter, req *http.Request) {
 	// timer := prometheus.NewTimer(jobDuration.WithLabelValues("listJobs"))
 	// defer timer.ObserveDuration()
@@ -177,6 +178,7 @@ func listJobs(w http.ResponseWriter, req *http.Request) {
 	render.JSON(w, req, paginateResp)
 }
 
+// Retrieve a Gostint job by Job ID
 func getJob(w http.ResponseWriter, req *http.Request) {
 	// timer := prometheus.NewTimer(jobDuration.WithLabelValues("getJob"))
 	// defer timer.ObserveDuration()
@@ -222,6 +224,7 @@ type deleteResponse struct {
 	ID string `json:"_id"`
 }
 
+// Delete a Gostint job by Job ID
 func deleteJob(w http.ResponseWriter, req *http.Request) {
 	// timer := prometheus.NewTimer(jobDuration.WithLabelValues("deleteJob"))
 	// defer timer.ObserveDuration()
@@ -337,6 +340,7 @@ type killResponse struct {
 	KillRequested bool   `json:"kill_requested"`
 }
 
+// Kill a Gostint job by Job ID
 func killJob(w http.ResponseWriter, req *http.Request) {
 	// timer := prometheus.NewTimer(jobDuration.WithLabelValues("killJob"))
 	// defer timer.ObserveDuration()

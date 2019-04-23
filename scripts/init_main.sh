@@ -45,6 +45,7 @@ wget -qO- https://dl.google.com/go/go${GOVER}.linux-amd64.tar.gz | \
   tar zx -C /usr/local/
 export PATH=$PATH:/usr/local/go/bin
 echo 'export PATH=$PATH:/usr/local/go/bin:~/go/bin' >> ~vagrant/.bashrc
+echo 'export GOPATH=$HOME/go' >> ~vagrant/.bashrc
 
 export MYPATH=~vagrant/go/src/github.com/gbevan/gostint
 

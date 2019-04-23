@@ -50,8 +50,8 @@ func Init(db *mgo.Database) {
 	}
 }
 
-// GetHealth Returns the gostint health status
-func GetHealth() (*map[string]string, error) {
+// GetHealthV1 Returns the gostint health status for api v1
+func GetHealthV1() (*map[string]string, error) {
 	m := make(map[string]string)
 	m["state"] = state.GetState()
 
