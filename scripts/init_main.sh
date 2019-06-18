@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-GOVER="1.11.3"
+GOVER="1.12.4"
 NODEVER="10"
 DOCKERVER="18.06.1~ce~3-0~ubuntu"  # match Dockerfile
 
@@ -22,7 +22,7 @@ apt install -y \
   curl \
   software-properties-common \
   bats \
-  uuid
+  uuid uuid-runtime
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
 apt-key fingerprint 0EBFCD88
 add-apt-repository \

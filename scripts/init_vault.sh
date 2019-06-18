@@ -4,6 +4,7 @@
 VAULTVER=1.1.0
 
 GOSTINT_ROLENAME="gostint-role"
+GOSTINT_RUN_ROLENAME="gostint-run-role"
 
 # Install and start Vault server in dev mode
 wget -qO /tmp/vault.zip https://releases.hashicorp.com/vault/${VAULTVER}/vault_${VAULTVER}_linux_amd64.zip && \
@@ -92,7 +93,7 @@ curl -s \
   --data '{"policy": "path \"transit/decrypt/'$GOSTINT_ROLENAME'\" {\n  capabilities = [\"update\"]\n}"}' \
   ${VAULT_ADDR}/v1/sys/policy/gostint-approle-transit-decrypt-gostint
 
-# Create named role for gostint
+# Create named AppRole for gostint
 echo '=== Create approle role for gostint ======================'
 vault write auth/approle/role/$GOSTINT_ROLENAME \
   secret_id_ttl=24h \
@@ -105,6 +106,23 @@ vault write auth/approle/role/$GOSTINT_ROLENAME \
 # Get RoleID for gostint
 export GOSTINT_ROLEID=`vault read -format=yaml -field=data auth/approle/role/$GOSTINT_ROLENAME/role-id | awk '{print $2;}'`
 echo -e "export GOSTINT_ROLEID=$GOSTINT_ROLEID\nexport GOSTINT_ROLENAME=$GOSTINT_ROLENAME" | tee -a .bashrc
+
+# Create named PUSH Mode AppRole for gostint-run
+echo '=== Create approle role for gostint-run =================='
+GOSTINT_RUN_SECRETID=$(uuidgen)
+vault write auth/approle/role/$GOSTINT_RUN_ROLENAME \
+  token_num_uses=2 \
+  token_ttl=20m \
+  token_max_ttl=30m \
+  policies="gostint-mongodb-auth"
+
+echo '=== Add secret-id to gostint-run ========================='
+vault write auth/approle/role/$GOSTINT_RUN_ROLENAME/custom-secret-id \
+  secret_id=$GOSTINT_RUN_SECRETID
+
+# Get RoleID for gostint-run
+export GOSTINT_RUN_ROLEID=`vault read -format=yaml -field=data auth/approle/role/$GOSTINT_RUN_ROLENAME/role-id | awk '{print $2;}'`
+echo -e "export GOSTINT_RUN_ROLEID=$GOSTINT_RUN_ROLEID\nexport GOSTINT_RUN_ROLENAME=$GOSTINT_RUN_ROLENAME\nexport GOSTINT_RUN_SECRETID=$GOSTINT_RUN_SECRETID" | tee -a .bashrc
 
 echo '=== Allow CORS for UI Development ========================'
 curl -s \

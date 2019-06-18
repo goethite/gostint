@@ -26,7 +26,7 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-// Authenticate using our AppRoleID and given SecretID with Vault
+// Authenticate using our AppRoleID and given wrapped SecretID with Vault
 func Authenticate(appRoleID string, wrapSecretID string) (string, *api.Client, error) {
 	/////////////////////////////////////
 	// AppRole Authenticate
@@ -47,7 +47,25 @@ func Authenticate(appRoleID string, wrapSecretID string) (string, *api.Client, e
 	if err != nil {
 		return "", &api.Client{}, fmt.Errorf("Request failed to unwrap the token to retrieve the SecretID - POSSIBLE SECURITY/INTERCEPTION ALERT!!!: THIS REQUEST MAY HAVE BEEN TAMPERED WITH, error: %s", err)
 	}
-	secretID := secret.Data["secret_id"]
+	secretID := secret.Data["secret_id"].(string)
+
+	return auth(appRoleID, secretID)
+}
+
+// AuthenticatePushMode using our AppRoleID and given SecretID with Vault
+func AuthenticatePushMode(appRoleID string, secretID string) (string, *api.Client, error) {
+	/////////////////////////////////////
+	// AppRole Authenticate PUSH Mode
+	return auth(appRoleID, secretID)
+}
+
+func auth(appRoleID string, secretID string) (string, *api.Client, error) {
+	client, err := api.NewClient(&api.Config{
+		Address: os.Getenv("VAULT_ADDR"),
+	})
+	if err != nil {
+		return "", &api.Client{}, fmt.Errorf("Failed create vault client api: %s", err)
+	}
 
 	// Authenticate this request using AppRole RoleID and SecretID
 	data := map[string]interface{}{
