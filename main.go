@@ -27,6 +27,7 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/gbevan/gostint/approle"
 	"github.com/gbevan/gostint/health"
 	"github.com/gbevan/gostint/jobqueues"
 	"github.com/gbevan/gostint/logmsg"
@@ -41,7 +42,6 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/render"
-	"github.com/hashicorp/vault/api"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -75,16 +75,27 @@ func GetAppRoleID() string {
 // Gododir/main.go tasks "default" -> "gettoken").
 func getDbCreds() (string, string, error) {
 	// new Vault API Client
-	client, err := api.NewClient(&api.Config{
-		Address: os.Getenv("VAULT_ADDR"),
-	})
+	// client, err := api.NewClient(&api.Config{
+	// 	Address: os.Getenv("VAULT_ADDR"),
+	// })
+	// if err != nil {
+	// 	return "", "", err
+	// }
+
+	// Authenticate with Vault using passed one-time token
+	// client.SetToken(os.Getenv("GOSTINT_DBAUTH_TOKEN"))
+	// os.Setenv("GOSTINT_DBAUTH_TOKEN", "")
+
+	// Authenticate with vault using gostint-run(time) approle
+	token, client, err := approle.AuthenticatePushMode(
+		os.Getenv("GOSTINT_RUN_ROLEID"),
+		os.Getenv("GOSTINT_RUN_SECRETID"),
+	)
 	if err != nil {
 		return "", "", err
 	}
 
-	// Authenticate with Vault using passed one-time token
-	client.SetToken(os.Getenv("GOSTINT_DBAUTH_TOKEN"))
-	os.Setenv("GOSTINT_DBAUTH_TOKEN", "")
+	client.SetToken(token)
 
 	// Get MongoDB ephemeral credentials
 	secretValues, err := client.Logical().Read("database/creds/gostint-dbauth-role")

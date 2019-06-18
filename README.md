@@ -64,11 +64,12 @@ vault login # to get a <token>
 
 # Request a MongoDB secret engine token for gostint to request an ephemeral
 # time-bound username/password pair.
-token=$(curl -s \
-  --request POST \
-  --header 'X-Vault-Token: <token>' \
-  --data '{"policies": ["gostint-mongodb-auth"], "ttl": "10m", "num_uses": 2}' \
-  ${VAULT_ADDR}/v1/auth/token/create | jq .auth.client_token -r)
+# TODO: this token is deprecated - Use Approle instead (gostint-run)
+# token=$(curl -s \
+#   --request POST \
+#   --header 'X-Vault-Token: <token>' \
+#   --data '{"policies": ["gostint-mongodb-auth"], "ttl": "10m", "num_uses": 2}' \
+#   ${VAULT_ADDR}/v1/auth/token/create | jq .auth.client_token -r)
 
 # Get gostint's AppRole RoleId from the Vault
 roleid=`curl -s --header 'X-Vault-Token: root' \
@@ -80,8 +81,9 @@ docker run --init -d \
   --privileged=true \
   -v /srv/gostint-1/etc:/var/lib/gostint \
   -e VAULT_ADDR="$VAULT_ADDR" \
-  -e GOSTINT_DBAUTH_TOKEN="$token" \
   -e GOSTINT_ROLEID="$roleid" \
+  -e GOSTINT_RUN_ROLEID="$runroleid" \
+  -e GOSTINT_RUN_SECRETID="$runsecretid" \
   -e GOSTINT_DBURL=your-db-host:27017
   goethite/gostint
 ```
@@ -208,7 +210,7 @@ To run the BATS test suite (in another terminal session):
 ## LICENSE - GPLv3
 
 ```
-Copyright 2018 Graham Lee Bevan <graham.bevan@ntlworld.com>
+Copyright 2018-2019 Graham Lee Bevan <graham.bevan@ntlworld.com>
 
 gostint is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
