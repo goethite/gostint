@@ -1,13 +1,13 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-extras = "~vagrant/go/src/github.com/gbevan/gostint/scripts/init_main.sh"
+extras = "~vagrant/gostint/scripts/init_main.sh"
 
 VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.define "gostint-dev", primary: true do |ubuntu|
     ubuntu.vm.provision "shell", inline: extras
-    ubuntu.vm.synced_folder "~/go", "/home/vagrant/go"
+    ubuntu.vm.synced_folder ".", "/home/vagrant/gostint"
     ubuntu.vm.provider "docker" do |d|
       d.image = "gbevan/vagrant-ubuntu-dev:bionic"
       d.has_ssh = true

@@ -47,8 +47,13 @@ fi
 
 echo "Logging in to dockerhub"
 docker login || exit 2
+
+# echo "Ensuring latest go version"
+# docker pull golang:latest
+
 echo "Building goethite/gostint:$TAG image"
 docker build -t goethite/gostint:$TAG . || exit 2
+
 echo "Pushing goethite/gostint:$TAG to dockerhub"
 docker push goethite/gostint:$TAG || exit 2
 
