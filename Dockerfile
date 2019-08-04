@@ -19,7 +19,7 @@
 
 ##############################################
 # Build stage
-FROM golang:latest as builder
+FROM golang:1.12.7 as builder
 WORKDIR /go/src/github.com/gbevan/gostint
 
 COPY main.go banner.go Gopkg* ./
