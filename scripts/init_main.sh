@@ -57,6 +57,13 @@ su - vagrant -c '
 '
 echo "Completed install of gbevan/godo"
 
+echo "Installing esc"
+su - vagrant -c '
+  export PATH=$PATH:/usr/local/go/bin:~/go/bin && \
+  go get -u github.com/mjibson/esc
+'
+echo "Completed install of esc"
+
 export MYPATH=~vagrant/gostint
 
 . $MYPATH/scripts/init_mongodb.sh

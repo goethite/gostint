@@ -119,7 +119,7 @@ func (f *_escFile) Readdir(count int) ([]os.FileInfo, error) {
 		return nil, io.EOF
 	}
 
-	return []os.FileInfo(fis[0:limit]), nil
+	return fis[0:limit], nil
 }
 
 func (f *_escFile) Stat() (os.FileInfo, error) {
@@ -213,7 +213,7 @@ var _escData = map[string]*_escFile{
 		name:    "banner.txt",
 		local:   "banner.txt",
 		size:    383,
-		modtime: 1553434922,
+		modtime: 1554061417,
 		compressed: `
 H4sIAAAAAAAC/3yQQUvEMBCF7/kVc1TQZHe9qIiIHnop4sVbYOy2QxLYJks6uyLkx0uSYqsHQ5LHm/ny
 AiPg35UAAC8Xu8bxo7ZBF4dpvoqWIuL6wUXNq6IrkuZP0iwLrhGvKocqJ2XROb/ufPSv/JQRIV7C8Ss6
