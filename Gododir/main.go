@@ -42,8 +42,8 @@ func tasks(p *do.Project) {
 
 	p.Task("gogenerate", nil, func(c *do.Context) {
 		c.Bash(`
-      echo "Generate static content"
-      go generate
+      echo "Generate static content" && \
+      go generate && \
       echo "Generate static content complete"
     `)
 	})
